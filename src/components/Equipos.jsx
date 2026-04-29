@@ -17,9 +17,12 @@ const Equipos = ({ equipos = [] }) => {
   };
 
   const getGrupo = (equipo) => {
-    const n = equipo.nombre.toUpperCase();
+    const s = (equipo.sistema || '').toUpperCase();
+    const n = (equipo.nombre || '').toUpperCase();
+    
     if (n.includes('ARCO')) return 'ARCO DE DESINFECCIÓN';
-    if (n.includes('SATÉLITE')) return 'LIMPIEZA';
+    if (s === 'LIMPIEZA') return 'LIMPIEZA';
+    if (s === 'GENERACIÓN' || s === 'CONJUNTO TÉRMICO' || s === 'DISTRIBUCIÓN') return 'SALA TÉRMICA';
     return 'SALA TÉRMICA';
   };
 
