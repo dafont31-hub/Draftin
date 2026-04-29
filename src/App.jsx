@@ -20,6 +20,7 @@ function App() {
   const [userName, setUserName] = useState('')
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Redirección de seguridad según rol
   useEffect(() => {
@@ -31,19 +32,25 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       setSession(initialSession)
-      if (initialSession) fetchUserRole(initialSession)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession)
-      if (currentSession) fetchUserRole(currentSession)
-      else {
-        setUserRole(null)
-        setUserName('')
-        setDebugInfo('')
+      if (initialSession) {
+        fetchUserRole(initialSession).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
       }
     })
-
+ 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession)
+      if (currentSession) {
+        setLoading(true)
+        fetchUserRole(currentSession).finally(() => setLoading(false))
+      } else {
+        setUserRole(null)
+        setUserName('')
+        setLoading(false)
+      }
+    })
+ 
     return () => subscription.unsubscribe()
   }, [])
 

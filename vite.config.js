@@ -7,21 +7,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: [],
       manifest: {
         name: 'Gestión de Calderas',
         short_name: 'Calderas PWA',
         description: 'Aplicación para la gestión y mantenimiento de calderas',
-        theme_color: '#1d4ed8',
+        theme_color: '#FF6B00',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'boiler_3d.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
             type: 'image/png'
           }
         ]
