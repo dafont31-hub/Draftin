@@ -111,6 +111,18 @@ function App() {
     }
   }
 
+  // Notificación de Base de Datos Vacía (Solo para depuración)
+  const EmptyDBWarning = () => {
+    if (session && equipos.length === 0 && !loading) {
+      return (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-red-600/20 border border-red-600 text-red-500 text-[8px] font-black p-2 rounded-lg z-[1000] animate-bounce uppercase">
+          ¡Atención! Tabla de Equipos Vacía en Supabase
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (!session) return <Login />
 
   if (userRole === null) {
@@ -137,6 +149,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-black text-white font-sans overflow-hidden">
+        <EmptyDBWarning />
         
         {/* SIDE MENU (DRAWER) */}
         <div className={`fixed inset-0 z-[200] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
