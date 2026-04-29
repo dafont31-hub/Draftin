@@ -52,10 +52,10 @@ const Analiticas = () => {
     if (revisiones) {
       const formattedData = revisiones.map(r => ({
         fecha: new Date(r.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-        c1: parseFloat(r.datos_quimica.caldera1?.[activeParam]) || 0,
-        c2: parseFloat(r.datos_quimica.caldera2?.[activeParam]) || 0,
-        desg: parseFloat(r.datos_quimica.desgasificador?.[activeParam]) || 0,
-        cond: parseFloat(r.datos_quimica.condensados?.[activeParam]) || 0,
+        c1: parseFloat(r.datos_quimica?.c1?.[activeParam]) || 0,
+        c2: parseFloat(r.datos_quimica?.c2?.[activeParam]) || 0,
+        desg: parseFloat(r.datos_quimica?.desg?.[activeParam]) || 0,
+        cond: parseFloat(r.datos_quimica?.cond?.[activeParam]) || 0,
       }));
       setData(formattedData);
     }
@@ -65,6 +65,14 @@ const Analiticas = () => {
   useEffect(() => {
     fetchAnaliticas();
   }, [activeParam]);
+
+  const getLastValue = (paramKey) => {
+    if (data.length === 0) return 0;
+    const last = data[data.length - 1];
+    return Math.max(last.c1 || 0, last.c2 || 0, last.desg || 0, last.cond || 0);
+  };
+
+  const lastDureza = getLastValue('dureza');
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -187,17 +195,32 @@ const Analiticas = () => {
 
       <div className="grid grid-cols-2 gap-4">
          <div className="industrial-card p-4 bg-[#0A0A0A] border-[#222]">
-            <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter">Última Lectura Dureza</span>
+            <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter">Última Lectura {activeParam}</span>
             <div className="flex items-end gap-2 mt-1">
-               <span className="text-[20px] font-black text-[#00FF88] leading-none">0.2</span>
-               <span className="text-[8px] text-gray-600 font-bold mb-1 uppercase">°fH</span>
+               <span className={`text-[20px] font-black leading-none ${activeParam === 'dureza' && lastDureza > 0.5 ? 'text-red-500' : 'text-[#00FF88]'}`}>
+                 {data.length > 0 ? getLastValue(activeParam).toFixed(1) : '0'}
+               </span>
+               <span className="text-[8px] text-gray-600 font-bold mb-1 uppercase">
+                 {activeParam === 'dureza' ? '°fH' : activeParam === 'ph' ? 'pH' : 'µS/cm'}
+               </span>
             </div>
          </div>
          <div className="industrial-card p-4 bg-[#0A0A0A] border-[#222]">
             <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter">Estado Tratamiento</span>
             <div className="flex items-center gap-2 mt-1">
-               <div className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse"></div>
-               <span className="text-[10px] font-black text-white uppercase tracking-widest">OPTIMO</span>
+               {data.length > 0 ? (
+                 <>
+                   <div className={`w-2 h-2 rounded-full animate-pulse ${lastDureza > 0.5 ? 'bg-red-500' : 'bg-[#00FF88]'}`}></div>
+                   <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                     {lastDureza > 0.5 ? 'ALERTA' : 'OPTIMO'}
+                   </span>
+                 </>
+               ) : (
+                 <>
+                   <div className="w-2 h-2 rounded-full bg-gray-600"></div>
+                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">SIN DATOS</span>
+                 </>
+               )}
             </div>
          </div>
       </div>
