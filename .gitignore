@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.env
+.env.local
+.env.*.local
+.DS_Store
+dist/
+node_modules/
+# SQL files (optional, but keep repo clean)
+*.sql

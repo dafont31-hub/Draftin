@@ -2,8 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply antialiased text-gray-900 bg-gray-50;
-  }
+:root {
+  --bg-main: #0A0A0A;
+  --bg-card: #141414;
+  --border-main: #222222;
+  --accent-orange: #FF6B00;
+  --accent-green: #00FF88;
+  --accent-red: #FF0044;
 }
+
+body {
+  background-color: var(--bg-main);
+  color: #FFFFFF;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tarjeta Industrial Base */
+.industrial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Interacción táctil sutil (Feedback) */
+.industrial-card.interactive:active {
+  transform: scale(0.97);
+  background-color: #1A1A1A;
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+/* Scrollbar Oculto */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

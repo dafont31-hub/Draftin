@@ -1,0 +1,112 @@
+Contador agua Antes 
+Temp. condensado (°C)
+Temp. servicio (°C)
+Presión servicio (bar)
+(Reserva)               bar / 55-75°C]           bar / 70-95°C]          bar / 65-95°C]
+PARÁMETRO
+Intercamb. A              Intercamb. B [5             Intercamb. C [5.5             Intercamb. E [5           
+  INTERCAMBIADORES TÉRMICOS
+Producto neutralizante (STENCO 4510) — nivel (%)
+Producto neutralizante (STENCO 4510) — dosis
+Producto anticorrosión (STENCO 3250) — nivel (%)
+Producto anticorrosión (STENCO 3250) — dosis                            
+Producto antiincrustante (STENCO 6000) — nivel (%)                             
+Producto antiincrustante (STENCO 6000) — dosis                              
+Presión (bar)
+Temperatura agua (°C)                
+Nivel desgasificador (%)
+PARÁMETRO / PRODUCTO                                          VALOR / OBSERVACIÓN
+  DESGASIFICADOR
+Alarmas activas (S/N)
+Consumo turno (Sm³)
+Gas Después (Sm³)
+Gas Antes (Sm³)
+Purgas OFF (segundos)
+Purgas ON (segundos)
+Horas funcionamiento
+Conductividad (μS/cm)
+Llama (%)
+Quemador (%)
+Presión gas quemador (mbar)
+Presión gas entrada (mbar)
+Temperatura vapor (°C)
+Presión de trabajo (bar)
+Nivel porcentaje (%)
+Nivel visual agua
+PARÁMETRO                                 CALDERA 1                     CALDERA 2
+  GENERADORES DE VAPOR
+Firma:
+Semana / Año:                                           Nombre Responsable:
+SALA DE CALDERAS
+CHECKLIST REVISIÓN DIARIA
+----------------Page (0) Break----------------
+Triplex 2
+Triplex 1
+Duplex 2
+Duplex 1
+Desgasificador
+Caldera 2
+Caldera 1
+PUNTO DE CONTROL                         Dureza (°fH)                         pH               Conductividad (μS/cm)
+  CONTROL QUÍMICO DEL AGUA
+Triplex 6
+Triplex 5
+Triplex 4
+Triplex 3
+Triplex 2
+Triplex 1
+Duplex 2
+Duplex 1
+(m³)                  (m³)
+EQUIPO                                                    Consumo turno (m³)                 Observaciones
+Contador Antes               Contador Después               
+  CONSUMOS DESCALCIFICADORES
+Triplex 6
+Triplex 5
+Triplex 4
+Triplex 3
+Triplex 2
+Triplex 1
+Duplex 2
+Duplex 1
+(bar)
+EQUIPO                             P. Salida (bar)              Servicio             Regeneración                  Estado
+P. Entrada        
+  DESCALCIFICADORES
+Filtro 2
+Filtro 1
+FILTRO                  Presión Entrada (bar)                     Presión Salida (bar)                       Limpieza (S/N)
+  FILTROS
+Limpieza (S/N)
+Horas
+(m³)
+Consumo agua turno 
+(m³)
+Contador agua Después                  
+(m³)
+----------------Page (1) Break----------------
+Nombre del responsable:  Firma:                                         Fecha de firma:
+OBSERVACIONES
+  OBSERVACIONES
+4
+3
+2
+1
+resolución
+Nº     Descripción de la incidencia                                Resolución                                   Firma responsable
+Fecha      
+  INCIDENCIAS
+Bote condensado 1 [35-55%]
+BOTE CONDENSADO                                                Nivel (%)
+  BOTE DE CONDENSADO
+Depósito Salmuera 3 [¾]
+Depósito Salmuera 2  [Lleno]
+Depósito Nodriza
+DEPÓSITO                                                Nivel (%)
+  DEPÓSITOS SALMUERA
+Depósito Condensados
+Triplex 6
+Triplex 5
+Triplex 4
+Triplex 3
+----------------Page (2) Break----------------
