@@ -94,7 +94,10 @@ function App() {
 
   async function fetchData() {
     try {
-      const { data: dataEquipos } = await supabase.from('equipos').select('*').order('sistema', { ascending: true })
+      const { data: dataEquipos, error: errEquipos } = await supabase.from('equipos').select('*').order('sistema', { ascending: true })
+      console.log("DEBUG: Equipos recibidos de Supabase:", dataEquipos);
+      if (errEquipos) console.error("DEBUG: Error de Supabase al leer equipos:", errEquipos);
+      
       const { data: dataOrdenes } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
       const { data: dataConsumos } = await supabase.from('consumos').select('*').order('fecha', { ascending: false })
       const { data: dataPlan } = await supabase.from('plan_mantenimiento').select('*, equipos(nombre)').order('proxima_fecha', { ascending: true })
