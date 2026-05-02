@@ -10,27 +10,46 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   const safePlan = Array.isArray(planMantenimiento) ? planMantenimiento : [];
   const safeEquipos = Array.isArray(equipos) ? equipos : [];
 
-  // FILTRO INDUSTRIAL REVISADO (Captura de Quemadores y Detalles)
+  // FILTRO INDUSTRIAL REVISADO (Mapeo de Equipos a Grupos SaaS)
   const getGrupoId = (eq) => {
     if (!eq) return 'Otros';
     const n = (eq.nombre || '').toUpperCase();
     const s = (eq.sistema || '').toUpperCase();
     
-    // Mapeo dinámico y palabras clave inteligentes
-    if (n.includes('CALDERA') || n.includes('QUEMADOR')) return groups.find(g => g.nombre.toUpperCase().includes('CALDERA'))?.grupo_id || 'Calderas';
-    if (n.includes('DESGASIFICADOR')) return groups.find(g => g.nombre.toUpperCase().includes('DESGAS'))?.grupo_id || 'Desgasificador';
-    if (s.includes('TÉRMICO') || s.includes('TERMICO') || n.includes('INTERCAMB')) return groups.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO'))?.grupo_id || 'Grupo Térmico';
-    if (s.includes('LIMPIEZA') || n.includes('LAVADERO') || n.includes('ARCO') || n.includes('SATÉLITE') || n.includes('ZPR45')) return groups.find(g => g.nombre.toUpperCase().includes('LIMPIEZA'))?.grupo_id || 'Limpieza';
-    if (s.includes('AGUA') || n.includes('DESCALC')) return groups.find(g => g.nombre.toUpperCase().includes('DESCALC'))?.grupo_id || 'Descalcificadores';
+    // 1. Mapeo por palabras clave (Prioridad Alta para mantener la lógica de planta)
+    if (n.includes('CALDERA') || n.includes('QUEMADOR') || s.includes('GENERACIÓN')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('CALDERA') || g.grupo_id.toUpperCase().includes('CALDERA'));
+       return match ? (match.grupo_id || match.nombre) : 'Calderas';
+    }
+    
+    if (n.includes('DESGASIFICADOR')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('DESGAS') || g.grupo_id.toUpperCase().includes('DESGAS'));
+       return match ? (match.grupo_id || match.nombre) : 'Desgasificador';
+    }
 
-    // Búsqueda genérica en los grupos de la DB
-    const match = groups.find(g => {
-      const gName = (g.nombre || '').toUpperCase().replace(/S$/, '');
-      const gId = (g.grupo_id || '').toUpperCase().replace(/S$/, '');
+    if (s.includes('TÉRMICO') || s.includes('TERMICO') || n.includes('INTERCAMB')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO') || g.grupo_id.toUpperCase().includes('TERM'));
+       return match ? (match.grupo_id || match.nombre) : 'Grupo Térmico';
+    }
+
+    if (s.includes('LIMPIEZA') || n.includes('LAVADERO') || n.includes('ARCO') || n.includes('SATÉLITE') || n.includes('ZPR45')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('LIMPIEZA') || g.grupo_id.toUpperCase().includes('LIMPIEZA'));
+       return match ? (match.grupo_id || match.nombre) : 'Limpieza';
+    }
+
+    if (s.includes('AGUA') || n.includes('DESCALC')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('DESCALC') || g.grupo_id.toUpperCase().includes('DESCALC'));
+       return match ? (match.grupo_id || match.nombre) : 'Descalcificadores';
+    }
+
+    // 2. Búsqueda genérica por nombre de grupo o sistema en la base de datos
+    const matchGeneric = groups.find(g => {
+      const gName = (g.nombre || '').toUpperCase();
+      const gId = (g.grupo_id || '').toUpperCase();
       return (s === gId || s === gName || n.includes(gName) || n.includes(gId));
     });
     
-    return match ? (match.grupo_id || match.nombre) : 'Otros';
+    return matchGeneric ? (matchGeneric.grupo_id || matchGeneric.nombre) : 'Otros';
   };
 
   const getGroupName = (gid) => {
