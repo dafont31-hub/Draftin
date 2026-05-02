@@ -69,6 +69,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
     if (n.includes('CALDERA')) return 'boiler_3d.png';
     if (n.includes('COLECTOR')) return 'collector_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
+    if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
     if (n.includes('DESCALC') || n.includes('SUAVIZADOR')) return 'softener_3d.png';
     if (n.includes('INTERCAMB') || n.includes('TÉRMICO') || n.includes('TERMICO')) return 'heat_exchanger_3d.png';
     if (n.includes('DEPÓSITO') || n.includes('DEPOSITO') || n.includes('TANQUE') || n.includes('BOTELLA') || n.includes('ACUMULADOR')) return 'tanks_3d.png';
