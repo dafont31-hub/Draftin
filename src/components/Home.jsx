@@ -194,32 +194,29 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
         </div>
       </div>
 
-      {/* TELEMETRÍA SCADA */}
-      <div className="mt-12 pt-8 border-t border-white/5">
-           <div className="flex justify-between items-center mb-8">
-              <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em] flex items-center gap-3">
-                <div className="w-1.5 h-3 bg-primary shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
-                TELEMETRÍA SCADA
+      {/* CONSUMOS SCADA */}
+      <div className="mt-8 pt-4 border-t border-white/5">
+           <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] flex items-center gap-2">
+                <div className="w-1 h-2 bg-primary shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
+                CONSUMOS PLANTA
               </h3>
-              <div className="flex gap-12">
+              <div className="flex gap-8">
                  <div className="flex flex-col items-end">
-                    <span className="text-[8px] font-black text-white/20 uppercase mb-1 tracking-[0.3em]">Temp. Vapor</span>
-                    <span className="text-2xl font-black text-white tracking-tighter">184.2 <span className="text-[10px] text-white/30">°C</span></span>
+                    <span className="text-[7px] font-black text-white/20 uppercase mb-0.5 tracking-[0.2em]">Consumo Gas</span>
+                    <span className="text-lg font-black text-white tracking-tighter">1.240 <span className="text-[8px] text-white/30">m³</span></span>
                  </div>
                  <div className="flex flex-col items-end">
-                    <span className="text-[8px] font-black text-white/20 uppercase mb-1 tracking-[0.3em]">Presión Red</span>
-                    <span className="text-2xl font-black text-primary tracking-tighter">10.1 <span className="text-[10px] text-primary/40">BAR</span></span>
+                    <span className="text-[7px] font-black text-white/20 uppercase mb-0.5 tracking-[0.2em]">Consumo Agua</span>
+                    <span className="text-lg font-black text-primary tracking-tighter">450 <span className="text-[8px] text-primary/40">m³</span></span>
                  </div>
               </div>
            </div>
-           <div className="h-[120px] w-full">
+           <div className="h-[60px] w-full opacity-50">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[{t:'00h',v:182},{t:'08h',v:190},{t:'16h',v:184},{t:'24h',v:183}]}>
-                  <defs><linearGradient id="scadaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.15}/><stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/></linearGradient></defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                  <XAxis dataKey="t" tick={{fill:'#ffffff20',fontSize:9,fontWeight:900}} axisLine={false} tickLine={false} />
-                  <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
-                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" fill="url(#scadaGradient)" strokeWidth={3} animationDuration={2000} />
+                <AreaChart data={[{t:'00h',v:30},{t:'04h',v:45},{t:'08h',v:80},{t:'12h',v:65},{t:'16h',v:90},{t:'20h',v:55},{t:'24h',v:40}]}>
+                  <defs><linearGradient id="scadaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.2}/><stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/></linearGradient></defs>
+                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" fill="url(#scadaGradient)" strokeWidth={2} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
            </div>
