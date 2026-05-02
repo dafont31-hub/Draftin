@@ -16,27 +16,33 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
     const n = (eq.nombre || '').toUpperCase();
     const s = (eq.sistema || '').toUpperCase();
     
-    // 1. Mapeo por palabras clave (Prioridad Alta para mantener la lógica de planta)
-    if (n.includes('CALDERA') || n.includes('QUEMADOR') || s.includes('GENERACIÓN')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('CALDERA') || g.grupo_id.toUpperCase().includes('CALDERA'));
-       return match ? (match.grupo_id || match.nombre) : 'Calderas';
-    }
+    // 1. Mapeo por palabras clave (Prioridad Alta)
     
+    // PRIORIDAD 1: DESGASIFICADOR (Debe ir a su grupo, no a Calderas)
     if (n.includes('DESGASIFICADOR')) {
        const match = groups.find(g => g.nombre.toUpperCase().includes('DESGAS') || g.grupo_id.toUpperCase().includes('DESGAS'));
        return match ? (match.grupo_id || match.nombre) : 'Desgasificador';
     }
 
+    // PRIORIDAD 2: CALDERAS Y QUEMADORES
+    if (n.includes('CALDERA') || n.includes('QUEMADOR') || s.includes('GENERACIÓN')) {
+       const match = groups.find(g => g.nombre.toUpperCase().includes('CALDERA') || g.grupo_id.toUpperCase().includes('CALDERA'));
+       return match ? (match.grupo_id || match.nombre) : 'Calderas';
+    }
+    
+    // PRIORIDAD 3: GRUPO TÉRMICO
     if (s.includes('TÉRMICO') || s.includes('TERMICO') || n.includes('INTERCAMB')) {
        const match = groups.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO') || g.grupo_id.toUpperCase().includes('TERM'));
        return match ? (match.grupo_id || match.nombre) : 'Grupo Térmico';
     }
 
+    // PRIORIDAD 4: LIMPIEZA
     if (s.includes('LIMPIEZA') || n.includes('LAVADERO') || n.includes('ARCO') || n.includes('SATÉLITE') || n.includes('ZPR45')) {
        const match = groups.find(g => g.nombre.toUpperCase().includes('LIMPIEZA') || g.grupo_id.toUpperCase().includes('LIMPIEZA'));
        return match ? (match.grupo_id || match.nombre) : 'Limpieza';
     }
 
+    // PRIORIDAD 5: TRATAMIENTO DE AGUA
     if (s.includes('AGUA') || n.includes('DESCALC')) {
        const match = groups.find(g => g.nombre.toUpperCase().includes('DESCALC') || g.grupo_id.toUpperCase().includes('DESCALC'));
        return match ? (match.grupo_id || match.nombre) : 'Descalcificadores';
