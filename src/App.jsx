@@ -66,27 +66,41 @@ function App() {
 
   async function fetchSaaSConfig() {
     try {
-      const { data: nav } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden')
-      const { data: brand } = await supabase.from('app_config_branding').select('*').single()
-      const { data: groups } = await supabase.from('app_config_grupos').select('*').order('orden')
+      const { data: nav, error: e1 } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden')
+      const { data: brand, error: e2 } = await supabase.from('app_config_branding').select('*').single()
+      const { data: groups, error: e3 } = await supabase.from('app_config_grupos').select('*').order('orden')
+      
+      if (e1) console.error("Error cargando pestañas:", e1);
+      if (e2) console.error("Error cargando branding:", e2);
+      if (e3) console.error("Error cargando grupos:", e3);
+
       if (nav) setNavItems(nav)
       if (groups) setAppConfigGrupos(groups)
       if (brand) {
         setBranding(brand)
         document.documentElement.style.setProperty('--primary-color', brand.color_primario)
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error crítico en fetchSaaSConfig:", e);
+    }
   }
 
   async function fetchData() {
     try {
-      const { data: e } = await supabase.from('equipos').select('*').order('sistema')
-      const { data: o } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
-      const { data: p } = await supabase.from('plan_mantenimiento').select('*, equipos(nombre)')
+      const { data: e, error: errE } = await supabase.from('equipos').select('*').order('sistema')
+      const { data: o, error: errO } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
+      const { data: p, error: errP } = await supabase.from('plan_mantenimiento').select('*, equipos(nombre)')
+      
+      if (errE) console.error("Error cargando equipos:", errE);
+      if (errO) console.error("Error cargando órdenes:", errO);
+      if (errP) console.error("Error cargando plan:", errP);
+
       if (e) setEquipos(e)
       if (o) setOrdenes(o)
       if (p) setPlanMantenimiento(p)
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error crítico en fetchData:", e);
+    }
   }
 
   if (!session) return <Login />
