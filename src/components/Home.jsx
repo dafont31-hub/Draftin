@@ -129,7 +129,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-in slide-in-from-bottom-6 duration-500">
-              {safeEquipos.filter(eq => getGrupoId(eq) === selectedGroup).map(eq => (
+              {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).map(eq => (
                 <div key={eq.id} className="p-6 border border-white/5 bg-transparent flex flex-col items-center gap-6 group hover:border-primary/40 transition-all rounded-3xl">
                   <div className="relative">
                     <div className="absolute inset-0 bg-white/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -138,7 +138,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                   <span className="text-[10px] font-black uppercase text-center text-white/80 line-clamp-2 leading-tight tracking-tighter group-hover:text-white">{eq.nombre}</span>
                 </div>
               ))}
-              {safeEquipos.filter(eq => getGrupoId(eq) === selectedGroup).length === 0 && (
+              {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).length === 0 && (
                 <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-[40px] flex flex-col items-center gap-6">
                    <AlertTriangle className="text-gray-800 w-12 h-12" />
                    <p className="text-[11px] font-black text-gray-700 uppercase tracking-[0.5em]">No hay unidades en este sector</p>
