@@ -86,47 +86,47 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   return (
     <div className="animate-in fade-in duration-500 pb-10">
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Órdenes Abiertas', val: safeOrdenes.filter(o => o.estado === 'Abierta').length, color: 'text-white' },
           { label: 'En Proceso', val: safeOrdenes.filter(o => o.estado === 'En Proceso').length, color: 'text-primary' },
           { label: 'Urgentes', val: safeOrdenes.filter(o => o.estado !== 'Finalizada' && o.prioridad === 'Urgente').length, color: 'text-red-500' },
           { label: 'Finalizadas', val: safeOrdenes.filter(o => o.estado === 'Finalizada').length, color: 'text-[#00FF88]' }
         ].map((s, i) => (
-          <div key={i} className="flex flex-col gap-1 border-l border-white/5 pl-4">
-             <span className="text-[7px] font-black text-gray-500 uppercase tracking-[0.2em]">{s.label}</span>
-             <span className={`text-2xl font-black ${s.color}`}>{s.val}</span>
+          <div key={i} className="flex flex-col gap-0.5 border-l border-white/5 pl-3">
+             <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em]">{s.label}</span>
+             <span className={`text-xl font-black ${s.color} tracking-tighter`}>{s.val}</span>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-        <div className="lg:col-span-3">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] flex items-center gap-3">
-               <div className="w-1.5 h-3 bg-primary shadow-[0_0_15px_var(--primary-color)]"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-4">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.5em] flex items-center gap-2">
+               <div className="w-1 h-3 bg-primary shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
                {selectedGroup ? `SISTEMA: ${getGroupName(selectedGroup)}` : 'MONITOR DE PLANTA'}
             </h3>
             {selectedGroup && (
-              <button onClick={() => setSelectedGroup(null)} className="text-[9px] font-black text-primary border border-primary/20 px-5 py-2 rounded-xl hover:bg-primary hover:text-black transition-all uppercase tracking-widest">
+              <button onClick={() => setSelectedGroup(null)} className="text-[8px] font-black text-primary border border-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-widest">
                 ‹ Volver
               </button>
             )}
           </div>
 
           {!selectedGroup ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {groups.map(g => {
                 const gid = g.grupo_id || g.nombre;
                 const status = getGroupStatus(gid);
                 return (
-                  <div key={g.id} onClick={() => setSelectedGroup(gid)} className="p-6 bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all cursor-pointer flex flex-col items-center gap-4 relative group h-[200px] justify-center rounded-[32px] shadow-xl">
-                     <div className={`absolute top-6 right-6 w-2 h-2 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_15px_#00FF88]' : 'bg-red-500 shadow-[0_0_15px_#EF4444] animate-pulse'}`}></div>
+                  <div key={g.id} onClick={() => setSelectedGroup(gid)} className="p-4 bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all cursor-pointer flex flex-col items-center gap-3 relative group h-[140px] justify-center rounded-[24px] shadow-lg">
+                     <div className={`absolute top-4 right-4 w-1.5 h-1.5 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_10px_#00FF88]' : 'bg-red-500 shadow-[0_0_10px_#EF4444] animate-pulse'}`}></div>
                      <div className="relative">
-                        <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                        <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                         <img 
                           src={`/${g.image}`} 
-                          className="h-32 w-32 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-1000 relative z-10"
+                          className="h-20 w-20 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-1000 relative z-10"
                           style={{ 
                             filter: 'brightness(1.6) contrast(1.2)',
                             maskImage: 'radial-gradient(circle, black 50%, transparent 95%)',
@@ -135,24 +135,24 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                           alt="" 
                         />
                      </div>
-                     <span className="text-[10px] font-black uppercase text-white/60 tracking-[0.3em] group-hover:text-primary transition-colors mt-1">{g.nombre}</span>
+                     <span className="text-[9px] font-black uppercase text-white/50 tracking-[0.2em] group-hover:text-primary transition-colors mt-1">{g.nombre}</span>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-in slide-in-from-bottom-6 duration-500">
+            <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3 animate-in slide-in-from-bottom-6 duration-500">
               {safeEquipos
                 .filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase())
                 .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
                 .map(eq => (
-                <div key={eq.id} className="aspect-square bg-white/[0.02] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-4 group hover:border-primary/30 transition-all rounded-[24px] relative overflow-hidden shadow-lg justify-center p-4">
+                <div key={eq.id} className="aspect-square bg-white/[0.02] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-3 group hover:border-primary/30 transition-all rounded-[16px] relative overflow-hidden shadow-lg justify-center p-3">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-primary/5 blur-[25px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-primary/5 blur-[20px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     
                     <img 
                       src={`/${getImage(eq.nombre)}`} 
-                      className="h-24 w-24 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700"
+                      className="h-16 w-16 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700"
                       style={{ 
                         filter: 'brightness(1.5) contrast(1.3)',
                         maskImage: 'radial-gradient(circle, black 40%, transparent 90%)',
@@ -161,7 +161,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                       alt="" 
                     />
                   </div>
-                  <span className="text-[9px] font-black uppercase text-center text-white/30 line-clamp-1 leading-tight tracking-tighter group-hover:text-white transition-colors z-10">{eq.nombre}</span>
+                  <span className="text-[7px] font-black uppercase text-center text-white/20 line-clamp-1 leading-tight tracking-tighter group-hover:text-white transition-colors z-10">{eq.nombre}</span>
                 </div>
               ))}
               {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).length === 0 && (
