@@ -146,9 +146,9 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                 .filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase())
                 .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
                 .map(eq => (
-                <div key={eq.id} className="p-6 bg-white/[0.02] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-4 group hover:border-primary/30 transition-all rounded-[28px] relative overflow-hidden shadow-lg h-[160px] justify-center">
+                <div key={eq.id} className="aspect-square bg-white/[0.02] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-4 group hover:border-primary/30 transition-all rounded-[24px] relative overflow-hidden shadow-lg justify-center p-4">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-primary/5 blur-[30px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-primary/5 blur-[25px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     
                     <img 
                       src={`/${getImage(eq.nombre)}`} 
@@ -195,31 +195,31 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
       </div>
 
       {/* TELEMETRÍA SCADA */}
-      <div className="mt-20 border-t border-white/5 pt-12">
-           <div className="flex justify-between items-center mb-12">
-              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] flex items-center gap-3">
-                <div className="w-1.5 h-3 bg-primary shadow-[0_0_15px_var(--primary-color)]"></div>
+      <div className="mt-12 pt-8 border-t border-white/5">
+           <div className="flex justify-between items-center mb-8">
+              <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em] flex items-center gap-3">
+                <div className="w-1.5 h-3 bg-primary shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
                 TELEMETRÍA SCADA
               </h3>
-              <div className="flex gap-16">
+              <div className="flex gap-12">
                  <div className="flex flex-col items-end">
-                    <span className="text-[8px] font-black text-gray-500 uppercase mb-2 tracking-[0.3em]">Temp. Vapor</span>
-                    <span className="text-3xl font-black text-white tracking-tighter italic">184.2 <span className="text-xs text-gray-700 not-italic">°C</span></span>
+                    <span className="text-[8px] font-black text-white/20 uppercase mb-1 tracking-[0.3em]">Temp. Vapor</span>
+                    <span className="text-2xl font-black text-white tracking-tighter">184.2 <span className="text-[10px] text-white/30">°C</span></span>
                  </div>
                  <div className="flex flex-col items-end">
-                    <span className="text-[8px] font-black text-gray-600 uppercase mb-2 tracking-[0.3em]">Presión Red</span>
-                    <span className="text-3xl font-black text-primary tracking-tighter italic shadow-primary/20 drop-shadow-lg">10.1 <span className="text-xs text-primary/40 not-italic">BAR</span></span>
+                    <span className="text-[8px] font-black text-white/20 uppercase mb-1 tracking-[0.3em]">Presión Red</span>
+                    <span className="text-2xl font-black text-primary tracking-tighter">10.1 <span className="text-[10px] text-primary/40">BAR</span></span>
                  </div>
               </div>
            </div>
-           <div className="h-[200px] w-full">
+           <div className="h-[120px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[{t:'00h',v:182},{t:'08h',v:190},{t:'16h',v:184},{t:'24h',v:183}]}>
-                  <defs><linearGradient id="scadaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.1}/><stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/></linearGradient></defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#111" vertical={false} />
-                  <XAxis dataKey="t" tick={{fill:'#333',fontSize:10,fontWeight:900}} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" fill="url(#scadaGradient)" strokeWidth={4} />
+                  <defs><linearGradient id="scadaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.15}/><stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis dataKey="t" tick={{fill:'#ffffff20',fontSize:9,fontWeight:900}} axisLine={false} tickLine={false} />
+                  <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
+                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" fill="url(#scadaGradient)" strokeWidth={3} animationDuration={2000} />
                 </AreaChart>
               </ResponsiveContainer>
            </div>
