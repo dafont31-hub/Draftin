@@ -120,21 +120,23 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                 const gid = g.grupo_id || g.nombre;
                 const status = getGroupStatus(gid);
                 return (
-                  <div key={g.id} onClick={() => setSelectedGroup(gid)} className="p-6 bg-transparent hover:bg-white/[0.03] transition-all cursor-pointer flex flex-col items-center gap-6 relative group h-[200px] justify-center rounded-3xl">
-                     <div className={`absolute top-6 right-6 w-2 h-2 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_15px_#00FF88]' : 'bg-red-500 shadow-[0_0_15px_#EF4444] animate-pulse'}`}></div>
+                  <div key={g.id} onClick={() => setSelectedGroup(gid)} className="p-8 bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all cursor-pointer flex flex-col items-center gap-6 relative group h-[240px] justify-center rounded-[40px] shadow-2xl">
+                     <div className={`absolute top-8 right-8 w-2.5 h-2.5 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_20px_#00FF88]' : 'bg-red-500 shadow-[0_0_20px_#EF4444] animate-pulse'}`}></div>
                      <div className="relative">
-                        <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        {/* Efecto de resplandor interno */}
+                        <div className="absolute inset-0 bg-primary/20 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                         <img 
-                           src={`/${g.image}`} 
-                           className="h-36 w-36 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700 relative z-10"
-                           style={{ 
-                             filter: 'brightness(1.6) contrast(1.2) drop-shadow(0 0 15px rgba(255,107,0,0.3))',
-                             WebkitFilter: 'brightness(1.6) contrast(1.2) drop-shadow(0 0 15px rgba(255,107,0,0.3))'
-                           }} 
-                           alt="" 
-                         />
+                          src={`/${g.image}`} 
+                          className="h-40 w-40 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-1000 relative z-10"
+                          style={{ 
+                            filter: 'brightness(1.6) contrast(1.2)',
+                            maskImage: 'radial-gradient(circle, black 50%, transparent 95%)',
+                            WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 95%)'
+                          }} 
+                          alt="" 
+                        />
                      </div>
-                     <span className="text-[11px] font-black uppercase text-white tracking-[0.3em] group-hover:text-primary transition-colors mt-2">{g.nombre}</span>
+                     <span className="text-[11px] font-black uppercase text-white/80 tracking-[0.4em] group-hover:text-primary transition-colors mt-2">{g.nombre}</span>
                   </div>
                 );
               })}
@@ -145,22 +147,22 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                 .filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase())
                 .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
                 .map(eq => (
-                <div key={eq.id} className="p-6 border border-white/5 bg-transparent flex flex-col items-center gap-6 group hover:border-primary/40 transition-all rounded-3xl relative overflow-hidden">
+                <div key={eq.id} className="p-8 bg-white/[0.02] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-6 group hover:border-primary/30 transition-all rounded-[35px] relative overflow-hidden shadow-xl">
                   <div className="relative">
-                    {/* Brillo de fondo para dar profundidad */}
-                    <div className="absolute inset-0 bg-primary/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-primary/5 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     
                     <img 
                       src={`/${getImage(eq.nombre)}`} 
                       className="h-28 w-28 object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700"
                       style={{ 
-                        filter: 'brightness(1.4) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,0.2))',
-                        WebkitFilter: 'brightness(1.4) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,0.2))'
+                        filter: 'brightness(1.5) contrast(1.3)',
+                        maskImage: 'radial-gradient(circle, black 40%, transparent 90%)',
+                        WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 90%)'
                       }} 
                       alt="" 
                     />
                   </div>
-                  <span className="text-[10px] font-black uppercase text-center text-white/60 line-clamp-2 leading-tight tracking-tighter group-hover:text-white transition-colors z-10">{eq.nombre}</span>
+                  <span className="text-[10px] font-black uppercase text-center text-white/40 line-clamp-2 leading-tight tracking-tighter group-hover:text-white transition-colors z-10">{eq.nombre}</span>
                 </div>
               ))}
               {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).length === 0 && (
