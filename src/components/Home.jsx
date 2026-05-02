@@ -65,11 +65,14 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
 
   const getImage = (nombre = '') => {
     const n = nombre.toUpperCase();
-    if (n.includes('QUEMADOR')) return 'burner_3d.png'; // CORRECCIÓN: Quemador Real
+    if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('CALDERA')) return 'boiler_3d.png';
-    if (n.includes('DESCALC')) return 'softener_3d.png';
-    if (n.includes('INTERCAMB') || n.includes('TERMICO')) return 'heat_exchanger_3d.png';
+    if (n.includes('DESCALC') || n.includes('SUAVIZADOR')) return 'softener_3d.png';
+    if (n.includes('INTERCAMB') || n.includes('TÉRMICO') || n.includes('TERMICO')) return 'heat_exchanger_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
+    if (n.includes('DEPÓSITO') || n.includes('DEPOSITO') || n.includes('TANQUE') || n.includes('BOTELLA') || n.includes('ACUMULADOR')) return 'tanks_3d.png';
+    if (n.includes('COLECTOR') || n.includes('RACK') || n.includes('DISTRI')) return 'degasser_3d.png';
+    if (n.includes('ARCO') || n.includes('LAVADERO') || n.includes('LIMPIEZA') || n.includes('ZPR45')) return 'chemical_3d.png';
     return 'boiler_3d.png';
   };
 
@@ -129,7 +132,10 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-in slide-in-from-bottom-6 duration-500">
-              {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).map(eq => (
+              {safeEquipos
+                .filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase())
+                .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+                .map(eq => (
                 <div key={eq.id} className="p-6 border border-white/5 bg-transparent flex flex-col items-center gap-6 group hover:border-primary/40 transition-all rounded-3xl">
                   <div className="relative">
                     <div className="absolute inset-0 bg-white/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
