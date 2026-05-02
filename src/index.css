@@ -6,7 +6,8 @@
   --bg-main: #0A0A0A;
   --bg-card: #141414;
   --border-main: #222222;
-  --accent-orange: #FF6B00;
+  --primary-color: #FF6B00;
+  --primary-color-rgb: 255, 107, 0;
   --accent-green: #00FF88;
   --accent-red: #FF0044;
 }
@@ -30,7 +31,7 @@ body {
 .industrial-card.interactive:active {
   transform: scale(0.97);
   background-color: #1A1A1A;
-  border-color: rgba(255, 107, 0, 0.4);
+  border-color: rgba(var(--primary-color-rgb), 0.4);
 }
 
 /* Scrollbar Oculto */

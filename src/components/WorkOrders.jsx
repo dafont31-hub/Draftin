@@ -439,19 +439,43 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
               <div 
                 key={ord.id} 
                 onClick={() => { setSelectedOrder(ord); setView('detail'); }}
-                className="industrial-card p-3 flex flex-col gap-1.5 cursor-pointer bg-[#141414] border-[#222]"
+                className={`industrial-card p-3 flex flex-col gap-1.5 cursor-pointer bg-[#141414] border-[#222] relative overflow-hidden ${ord.tipo === 'Preventivo' ? 'border-l-4 border-l-blue-500' : ''}`}
               >
                  <div className="flex justify-between items-center">
-                   <span className="text-[9px] font-bold text-gray-300">#{ord.id.slice(0,8)}</span>
+                   <div className="flex items-center gap-2">
+                     <span className="text-[9px] font-bold text-gray-300">#{ord.id.slice(0,8)}</span>
+                     {ord.tipo === 'Preventivo' && (
+                       <span className="text-[7px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">INSPECCIÓN OFICIAL</span>
+                     )}
+                   </div>
                    <span className="text-[8px] font-medium text-gray-500">{new Date(ord.created_at).toLocaleDateString()}</span>
                  </div>
+                 
                  <p className="text-[11px] text-white font-bold">{equipo?.nombre || 'Equipo'} - {ord.titulo}</p>
-                 <div className="flex mt-1">
-                   <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-sm tracking-wider ${
-                      ord.prioridad === 'Urgente' ? 'bg-red-500/20 text-red-500' :
-                      ord.prioridad === 'Grave' ? 'bg-[#FF6B00]/20 text-[#FF6B00]' :
-                      'bg-[#00FF88]/20 text-[#00FF88]'
-                   }`}>{ord.prioridad}</span>
+                 
+                 <div className="flex items-center justify-between mt-1">
+                   <div className="flex gap-2">
+                     <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-sm tracking-wider ${
+                        ord.prioridad === 'Urgente' ? 'bg-red-500/20 text-red-500' :
+                        ord.prioridad === 'Grave' ? 'bg-[#FF6B00]/20 text-[#FF6B00]' :
+                        'bg-[#00FF88]/20 text-[#00FF88]'
+                     }`}>{ord.prioridad}</span>
+                     
+                     <span className="text-[7px] font-black uppercase px-2 py-0.5 bg-[#222] text-gray-400 rounded-sm tracking-wider">
+                       {ord.estado}
+                     </span>
+                   </div>
+
+                   {ord.fecha_limite && (
+                     <div className="flex items-center gap-1.5">
+                       <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                       </svg>
+                       <span className={`text-[9px] font-black ${new Date(ord.fecha_limite) < new Date() ? 'text-red-500 animate-pulse' : 'text-primary'}`}>
+                         VENCE: {new Date(ord.fecha_limite).toLocaleDateString()}
+                       </span>
+                     </div>
+                   )}
                  </div>
               </div>
             );

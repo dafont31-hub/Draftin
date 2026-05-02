@@ -8,10 +8,11 @@ export default {
     extend: {
       colors: {
         'industrial-bg': '#0A0A0A',
-        'industrial-card': '#1A1A1A',
-        'industrial-border': '#2D2D2D',
-        'industrial-title': '#999999',
-        'neon-orange': '#FF6B00',
+        'industrial-card': '#141414',
+        'industrial-border': '#222222',
+        'primary': 'var(--primary-color)',
+        'accent-green': '#00FF88',
+        'accent-red': '#FF0044',
       },
       boxShadow: {
         'inner-glow': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',

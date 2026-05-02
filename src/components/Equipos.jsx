@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const Equipos = ({ equipos = [] }) => {
+const Equipos = ({ equipos = [], categories = [] }) => {
   const [activeCategory, setActiveCategory] = useState('SALA TÉRMICA');
-  const categories = ['SALA TÉRMICA', 'LIMPIEZA', 'ARCO DE DESINFECCIÓN'];
+
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].nombre);
+    }
+  }, [categories, activeCategory]);
+
+  const displayCategories = categories.length > 0 
+    ? categories 
+    : [
+        { nombre: 'SALA TÉRMICA', grupo_id: 'SALA TÉRMICA' }, 
+        { nombre: 'LIMPIEZA', grupo_id: 'LIMPIEZA' }, 
+        { nombre: 'ARCO DE DESINFECCIÓN', grupo_id: 'ARCO DE DESINFECCIÓN' }
+      ];
 
   const getImage = (nombre) => {
     const n = nombre.toUpperCase();
@@ -20,10 +33,14 @@ const Equipos = ({ equipos = [] }) => {
     const s = (equipo.sistema || '').toUpperCase();
     const n = (equipo.nombre || '').toUpperCase();
     
+    // Logic to map 'sistema' from DB to the visual categories
     if (n.includes('ARCO')) return 'ARCO DE DESINFECCIÓN';
     if (s === 'LIMPIEZA') return 'LIMPIEZA';
-    if (s === 'GENERACIÓN' || s === 'CONJUNTO TÉRMICO' || s === 'DISTRIBUCIÓN') return 'SALA TÉRMICA';
-    return 'SALA TÉRMICA';
+    if (s === 'GENERACIÓN' || s === 'CONJUNTO TÉRMICO' || s === 'DISTRIBUCIÓN' || s === 'TÉRMICO') return 'SALA TÉRMICA';
+    
+    // Fallback to match exactly
+    const match = displayCategories.find(c => c.nombre.toUpperCase() === s || c.grupo_id === s);
+    return match ? match.nombre : 'SALA TÉRMICA';
   };
 
   const filteredEquipos = equipos
@@ -32,24 +49,25 @@ const Equipos = ({ equipos = [] }) => {
 
   const statusLEDs = {
     'Operativo': 'bg-[#00FF88]',
+    'Operativa': 'bg-[#00FF88]',
     'Alarma': 'bg-[#FF6B00]',
     'Crítico': 'bg-[#FF0044]',
   };
 
   return (
     <div className="animate-in fade-in duration-300 flex flex-col h-full">
-      {/* Pestañas de categorías */}
+      {/* Pestañas de categorías dinámicas */}
       <div className="flex border-b border-[#222] mb-5 overflow-x-auto no-scrollbar px-1">
-        {categories.map((cat) => (
+        {displayCategories.map((cat) => (
           <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
+            key={cat.id || cat.nombre}
+            onClick={() => setActiveCategory(cat.nombre)}
             className={`whitespace-nowrap px-6 py-3 text-[10px] font-black tracking-[0.2em] relative transition-all ${
-              activeCategory === cat ? 'text-[#FF6B00]' : 'text-gray-500 hover:text-gray-300'
+              activeCategory === cat.nombre ? 'text-[#FF6B00]' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {cat}
-            {activeCategory === cat && (
+            {cat.nombre}
+            {activeCategory === cat.nombre && (
               <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#FF6B00] shadow-[0_-4px_10px_rgba(255,107,0,0.3)]"></div>
             )}
           </button>
@@ -77,7 +95,7 @@ const Equipos = ({ equipos = [] }) => {
                   <h4 className="text-white text-[12px] font-black uppercase tracking-wide">{eq.nombre}</h4>
                 </div>
                 <div className="flex items-center gap-2">
-                   <div className={`w-2 h-2 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' ? 'animate-pulse' : ''}`}></div>
+                   <div className={`w-2 h-2 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse' : ''}`}></div>
                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{eq.estado}</p>
                    <span className="text-[#333] text-[10px]">•</span>
                    <p className="text-[9px] font-medium text-gray-600 uppercase tracking-tight">{eq.sistema || 'General'}</p>
