@@ -21,13 +21,15 @@ const Equipos = ({ equipos = [], categories = [] }) => {
 
   const getImage = (nombre) => {
     const n = nombre.toUpperCase();
-    if (n.includes('CALDERA')) return 'boiler_3d.png';
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
-    if (n.includes('INTERCAMBIADOR')) return 'heat_exchanger_3d.png';
+    if (n.includes('CALDERA')) return 'boiler_3d.png';
+    if (n.includes('COLECTOR')) return 'collector_3d.png';
+    if (n.includes('DESGAS')) return 'degasser_3d.png';
+    if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
     if (n.includes('DESCALC') || n.includes('DUPLEX')) return 'softener_3d.png';
-    if (n.includes('DESGASIFICADOR')) return 'degasser_3d.png';
-    if (n.includes('ARCO')) return 'softener_3d.png'; 
-    if (n.includes('SATÉLITE')) return 'softener_3d.png'; 
+    if (n.includes('INTERCAMBIADOR') || n.includes('INTERCAMB') || n.includes('TÉRMICO') || n.includes('TERMICO')) return 'heat_exchanger_3d.png';
+    if (n.includes('DEPÓSITO') || n.includes('DEPOSITO') || n.includes('TANQUE') || n.includes('BOTELLA') || n.includes('ACUMULADOR')) return 'tanks_3d.png';
+    if (n.includes('ARCO') || n.includes('LAVADERO') || n.includes('LIMPIEZA') || n.includes('ZPR45') || n.includes('SATÉLITE')) return 'chemical_3d.png';
     return 'boiler_3d.png';
   };
 
