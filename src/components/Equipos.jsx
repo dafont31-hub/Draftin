@@ -31,18 +31,49 @@ const Equipos = ({ equipos = [], categories = [] }) => {
     return 'boiler_3d.png';
   };
 
-  const getGrupo = (equipo) => {
-    const s = (equipo.sistema || '').toUpperCase();
-    const n = (equipo.nombre || '').toUpperCase();
+  const getGrupo = (eq) => {
+    if (!eq) return 'Otros';
+    const n = (eq.nombre || '').toUpperCase();
+    const s = (eq.sistema || '').toUpperCase();
     
-    // Logic to map 'sistema' from DB to the visual categories
-    if (n.includes('ARCO')) return 'ARCO DE DESINFECCIÓN';
-    if (s === 'LIMPIEZA') return 'LIMPIEZA';
-    if (s === 'GENERACIÓN' || s === 'CONJUNTO TÉRMICO' || s === 'DISTRIBUCIÓN' || s === 'TÉRMICO') return 'SALA TÉRMICA';
+    // 1. PRIORIDAD: DESGASIFICADOR
+    if (n.includes('DESGASIFICADOR')) {
+       const match = displayCategories.find(g => g.nombre.toUpperCase().includes('DESGAS') || (g.grupo_id && g.grupo_id.toUpperCase().includes('DESGAS')));
+       return match ? match.nombre : 'DESGASIFICADOR';
+    }
+
+    // 2. PRIORIDAD: TRATAMIENTO DE AGUA (Descalcificadores)
+    if (n.includes('DESCALC') || n.includes('SUAVIZADOR') || n.includes('TRIPLEX') || s.includes('AGUA')) {
+       const match = displayCategories.find(g => g.nombre.toUpperCase().includes('DESCALC') || (g.grupo_id && g.grupo_id.toUpperCase().includes('DESCALC')));
+       return match ? match.nombre : 'DESCALCIFICADORES';
+    }
+
+    // 3. PRIORIDAD: GRUPO TÉRMICO (Intercambiadores)
+    if (s.includes('TÉRMICO') || s.includes('TERMICO') || n.includes('INTERCAMB') || n.includes('TÉRMICO') || n.includes('TERMICO')) {
+       const match = displayCategories.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO') || (g.grupo_id && g.grupo_id.toUpperCase().includes('TERM')));
+       return match ? match.nombre : 'GRUPO TÉRMICO';
+    }
+
+    // 4. PRIORIDAD: CALDERAS Y QUEMADORES (Generación)
+    if (n.includes('CALDERA') || n.includes('QUEMADOR') || s.includes('GENERACIÓN')) {
+       const match = displayCategories.find(g => g.nombre.toUpperCase().includes('CALDERA') || (g.grupo_id && g.grupo_id.toUpperCase().includes('CALDERA')));
+       return match ? match.nombre : 'CALDERAS';
+    }
     
-    // Fallback to match exactly
-    const match = displayCategories.find(c => c.nombre.toUpperCase() === s || c.grupo_id === s);
-    return match ? match.nombre : 'SALA TÉRMICA';
+    // 5. PRIORIDAD: LIMPIEZA
+    if (s.includes('LIMPIEZA') || n.includes('LAVADERO') || n.includes('ARCO') || n.includes('SATÉLITE') || n.includes('ZPR45')) {
+       const match = displayCategories.find(g => g.nombre.toUpperCase().includes('LIMPIEZA') || (g.grupo_id && g.grupo_id.toUpperCase().includes('LIMPIEZA')));
+       return match ? match.nombre : 'LIMPIEZA';
+    }
+
+    // Fallback exacto o genérico
+    const matchGeneric = displayCategories.find(g => {
+      const gName = (g.nombre || '').toUpperCase();
+      const gId = (g.grupo_id || '').toUpperCase();
+      return (s === gId || s === gName || n.includes(gName) || n.includes(gId));
+    });
+    
+    return matchGeneric ? matchGeneric.nombre : displayCategories[0].nombre;
   };
 
   const filteredEquipos = equipos
