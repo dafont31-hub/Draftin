@@ -76,7 +76,9 @@ function App() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_pestanas' }, () => fetchSaaSConfig())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_branding' }, () => fetchSaaSConfig())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_grupos' }, () => fetchSaaSConfig())
-        // .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_ui' }, () => fetchSaaSConfig())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_pestanas' }, () => fetchSaaSConfig())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_branding' }, () => fetchSaaSConfig())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_grupos' }, () => fetchSaaSConfig())
         .subscribe()
       return () => supabase.removeChannel(channel)
     }
@@ -87,12 +89,10 @@ function App() {
       const { data: nav, error: e1 } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden')
       const { data: brand, error: e2 } = await supabase.from('app_config_branding').select('*').single()
       const { data: groups, error: e3 } = await supabase.from('app_config_grupos').select('*').order('orden')
-      // const { data: ui, error: e4 } = await supabase.from('app_config_ui').select('*').single()
       
       if (e1) console.error("Error cargando pestañas:", e1);
       if (e2) console.error("Error cargando branding:", e2);
       if (e3) console.error("Error cargando grupos:", e3);
-      // if (e4) console.error("Error cargando UI:", e4);
 
       if (nav && nav.length > 0) {
         setNavItems(nav);
