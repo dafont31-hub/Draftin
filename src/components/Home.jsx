@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Activity, Bell, AlertTriangle } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
 const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [chartReady, setChartReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setChartReady(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const safeOrdenes = Array.isArray(ordenes) ? ordenes : [];
   const safePlan = Array.isArray(planMantenimiento) ? planMantenimiento : [];
@@ -254,41 +260,43 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
             <div className="w-full h-[140px] -ml-4">
-              <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                <AreaChart data={[
-                  {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                  {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-                ]}>
-                  <defs>
-                    <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FF6B00" stopOpacity={0.4}/>
-                      <stop offset="100%" stopColor="#FF6B00" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis 
-                    dataKey="h" 
-                    stroke="rgba(255,255,255,0.2)" 
-                    fontSize={8} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                  />
-                  <YAxis 
-                    stroke="rgba(255,255,255,0.2)" 
-                    fontSize={8} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                    domain={[0, 1500]}
-                  />
-                  <Tooltip 
-                    contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                    itemStyle={{color: '#FF6B00'}}
-                  />
-                  <Area type="monotone" dataKey="v" stroke="#FF6B00" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {chartReady && (
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                  <AreaChart data={[
+                    {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
+                    {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
+                  ]}>
+                    <defs>
+                      <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#FF6B00" stopOpacity={0.4}/>
+                        <stop offset="100%" stopColor="#FF6B00" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                    <XAxis 
+                      dataKey="h" 
+                      stroke="rgba(255,255,255,0.2)" 
+                      fontSize={8} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                    />
+                    <YAxis 
+                      stroke="rgba(255,255,255,0.2)" 
+                      fontSize={8} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                      domain={[0, 1500]}
+                    />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
+                      itemStyle={{color: '#FF6B00'}}
+                    />
+                    <Area type="monotone" dataKey="v" stroke="#FF6B00" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
         </div>
 
@@ -308,41 +316,43 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
             <div className="w-full h-[140px] -ml-4">
-              <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                <AreaChart data={[
-                  {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                  {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-                ]}>
-                  <defs>
-                    <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
-                      <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis 
-                    dataKey="h" 
-                    stroke="rgba(255,255,255,0.2)" 
-                    fontSize={8} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                  />
-                  <YAxis 
-                    stroke="rgba(255,255,255,0.2)" 
-                    fontSize={8} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                    domain={[0, 600]}
-                  />
-                  <Tooltip 
-                    contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                    itemStyle={{color: 'var(--primary-color)'}}
-                  />
-                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#waterGradient)" isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {chartReady && (
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                  <AreaChart data={[
+                    {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
+                    {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
+                  ]}>
+                    <defs>
+                      <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
+                        <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                    <XAxis 
+                      dataKey="h" 
+                      stroke="rgba(255,255,255,0.2)" 
+                      fontSize={8} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                    />
+                    <YAxis 
+                      stroke="rgba(255,255,255,0.2)" 
+                      fontSize={8} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                      domain={[0, 600]}
+                    />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
+                      itemStyle={{color: 'var(--primary-color)'}}
+                    />
+                    <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#waterGradient)" isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
         </div>
       </div>
