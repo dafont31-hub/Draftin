@@ -224,18 +224,31 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
            })()}
 
             <div className="flex flex-col gap-4 border-l border-white/5 pl-4">
-              {safePlan.filter(p => p.tipo?.toUpperCase().includes('REGLAMENTARIO') || p.prioridad === 'Alta').slice(0, 6).map((item, idx) => (
+              {upcomingMaintenance.map((item, idx) => (
                 <div key={idx} className="flex flex-col gap-1 group cursor-default">
-                  <span className="text-[8px] font-black text-blue-400/80 uppercase tracking-widest leading-none group-hover:text-blue-400 transition-colors line-clamp-1">{item.tarea}</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1 h-1 rounded-full ${item.isOrder ? 'bg-orange-500 animate-pulse' : 'bg-blue-400'}`}></div>
+                    <span className={`text-[8px] font-black uppercase tracking-widest leading-none transition-colors line-clamp-1 ${item.isOrder ? 'text-white' : 'text-blue-400/80 group-hover:text-blue-400'}`}>
+                      {item.isOrder ? item.titulo : item.tarea}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[6px] text-white/10 font-bold uppercase group-hover:text-white/30 transition-colors">
-                      {safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA'}
+                      {item.isOrder 
+                        ? (equipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
+                        : (safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
+                      }
                     </span>
-                    <span className="text-[8px] font-black text-white/20 group-hover:text-white/60 transition-colors">{item.proxima_fecha ? new Date(item.proxima_fecha).toLocaleDateString() : '--'}</span>
+                    <span className="text-[8px] font-black text-white/20 group-hover:text-white/60 transition-colors">
+                      {item.date ? new Date(item.date).toLocaleDateString() : '--'}
+                    </span>
                   </div>
+                  {item.isOrder && (
+                    <span className="text-[6px] font-black text-orange-500/50 uppercase tracking-[0.2em]">{item.estado}</span>
+                  )}
                 </div>
               ))}
-              {safePlan.length === 0 && (
+              {upcomingMaintenance.length === 0 && (
                 <span className="text-[7px] font-black text-white/10 uppercase tracking-widest">No hay hitos programados</span>
               )}
             </div>
