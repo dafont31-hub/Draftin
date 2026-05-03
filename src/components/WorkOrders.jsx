@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { generateOrderReport } from '../services/reportService';
 import { Trash2, Edit3, ChevronLeft, Save, Camera } from 'lucide-react';
 
 const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
@@ -36,91 +37,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   };
 
   const generateSingleOrderPDF = (order) => {
-    const doc = new jsPDF();
-    const eq = equipos.find(e => e.id === order.equipo_id);
-    
-    // Header Industrial
-    doc.setFillColor(20, 20, 20);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255, 107, 0);
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text("DRAFTIN", 15, 25);
-    doc.setTextColor(255);
-    doc.setFontSize(10);
-    doc.text("INSPECCIÓN TÉCNICA Y MANTENIMIENTO", 15, 32);
-    
-    // Datos OT
-    doc.setTextColor(0);
-    doc.setFontSize(12);
-    doc.text(`ORDEN DE TRABAJO: #${order.id.slice(0, 8)}`, 15, 55);
-    
-    const info = [
-      ["Equipo", eq?.nombre || 'General'],
-      ["Unidad/Satélite", order.sub_equipo || 'N/A'],
-      ["Tipo", order.tipo],
-      ["Prioridad", order.prioridad],
-      ["Técnico", order.tecnico_asignado || 'Sin asignar'],
-      ["Fecha", new Date(order.created_at).toLocaleDateString()]
-    ];
-     doc.autoTable({
-      startY: 60,
-      body: info,
-      theme: 'plain',
-      styles: { fontSize: 10, cellPadding: 2 },
-      columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
-    });
-    
-    // Descripción
-    let finalY = 110;
-    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
-      finalY = doc.lastAutoTable.finalY + 10;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.text("OBSERVACIONES TÉCNICAS:", 15, finalY);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const splitText = doc.splitTextToSize(order.descripcion || 'Sin observaciones detalladas.', 180);
-    doc.text(splitText, 15, finalY + 7);
-    
-    // Evidencia Fotográfica
-    const photoY = finalY + 25;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("EVIDENCIA FOTOGRÁFICA", 15, photoY);
-    
-    // Renderizado de fotos (Antes y Después) con seguridad total
-    const imgWidth = 85;
-    const imgHeight = 65;
-    
-    const drawPhoto = (photoData, x, label) => {
-      if (photoData && photoData.startsWith('data:image')) {
-        try {
-          doc.addImage(photoData, 'JPEG', x, photoY + 5, imgWidth, imgHeight);
-          doc.setFontSize(8);
-          doc.text(label, x, photoY + imgHeight + 10);
-        } catch (e) {
-          doc.rect(x, photoY + 5, imgWidth, imgHeight);
-          doc.text("ERROR CARGANDO IMAGEN", x + 5, photoY + 35);
-        }
-      } else {
-        doc.setDrawColor(200);
-        doc.rect(x, photoY + 5, imgWidth, imgHeight);
-        doc.setFontSize(8);
-        doc.text(`SIN FOTO ${label}`, x + 25, photoY + 35);
-      }
-    };
-
-    drawPhoto(order.foto_antes || fotoAntes, 15, "ESTADO INICIAL (ANTES)");
-    drawPhoto(order.foto_despues || fotoDespues, 110, "ESTADO FINAL (DESPUÉS)");
-    
-    // Pie de página
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text("Este documento certifica la intervención técnica realizada en planta.", 105, 285, { align: "center" });
-    
-    doc.save(`OT_${order.id.slice(0, 8)}_${eq?.nombre || 'Intervencion'}.pdf`);
+    generateOrderReport(order, equipos);
   };
 
   const generateBulkPDF = () => {
