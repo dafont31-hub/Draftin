@@ -8,7 +8,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   const [chartReady, setChartReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setChartReady(true), 500);
+    const timer = setTimeout(() => setChartReady(true), 1000);
     return () => clearTimeout(timer);
   }, []);
 
