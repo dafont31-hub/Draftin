@@ -230,20 +230,23 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1.5">
               <label className="text-[8px] font-black text-primary uppercase tracking-widest ml-1">Evidencia Inicial</label>
-              <div 
-                onClick={() => fileInputAntes.current.click()} 
-                className="aspect-video bg-[#111] border border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-primary/40 transition-all"
-              >
-                {newOrder.foto_antes ? (
-                  <img src={newOrder.foto_antes} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex flex-col items-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity">
-                    <Camera size={20} className="text-gray-400" />
-                    <span className="text-[7px] font-black uppercase tracking-widest">Tomar Foto</span>
-                  </div>
-                )}
+              <div className="flex items-center gap-3">
+                <div 
+                  onClick={() => fileInputAntes.current.click()} 
+                  className="w-16 h-16 bg-[#111] border border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-primary/40 transition-all shrink-0"
+                >
+                  {newOrder.foto_antes ? (
+                    <img src={newOrder.foto_antes} className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera size={16} className="text-gray-400 opacity-30 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Tocar para capturar</span>
+                  <span className="text-[6px] text-gray-700 font-bold uppercase mt-0.5">La foto se adjuntará a la OT</span>
+                </div>
               </div>
               <input type="file" ref={fileInputAntes} hidden capture="environment" onChange={(e) => handleCapture(e, (res) => setNewOrder({...newOrder, foto_antes: res}))} />
             </div>
