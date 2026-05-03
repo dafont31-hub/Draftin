@@ -104,13 +104,13 @@ const Equipos = ({ equipos = [], categories = [] }) => {
           {saveMsg}
         </div>
       )}
-      {/* Pestañas de categorías dinámicas */}
-      <div className="flex border-b border-[#222] mb-5 overflow-x-auto no-scrollbar px-1">
+      {/* Pestañas de categorías dinámicas - Mejorado para Scroll Móvil */}
+      <div className="flex border-b border-[#222] mb-5 overflow-x-auto flex-nowrap no-scrollbar px-1 scroll-smooth">
         {displayCategories.map((cat) => (
           <button
             key={cat.id || cat.nombre}
             onClick={() => setActiveCategory(cat.nombre)}
-            className={`whitespace-nowrap px-6 py-3 text-[10px] font-black tracking-[0.2em] relative transition-all ${
+            className={`whitespace-nowrap flex-shrink-0 px-5 py-3 text-[9px] font-black tracking-[0.2em] relative transition-all ${
               activeCategory === cat.nombre ? 'text-[#FF6B00]' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
