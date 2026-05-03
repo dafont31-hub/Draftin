@@ -84,7 +84,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   };
 
   return (
-    <div className="animate-in fade-in duration-500 pb-10 relative">
+    <div className="animate-in fade-in duration-500 pb-10">
       {/* STATS */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
@@ -102,38 +102,30 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
 
       <div className="flex flex-col lg:flex-row gap-10">
         <div className="flex-1 min-w-0 space-y-6">
-          <div className="flex items-center justify-between h-10 mb-6">
-            <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] flex items-center gap-3 italic">
-                <div className="w-1.5 h-3 bg-primary shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.5)]"></div>
-                Estado de los Sectores
+          <div className="flex justify-between items-center h-10">
+            <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.5em] flex items-center gap-2">
+               <div className="w-1 h-3 bg-primary shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
+               {selectedGroup ? `SISTEMA: ${getGroupName(selectedGroup)}` : 'MONITOR DE PLANTA'}
             </h3>
-            <div className="flex gap-2">
-              {selectedGroup && (
-                <button onClick={() => setSelectedGroup(null)} className="text-[8px] font-black text-primary border border-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-widest">
-                  ‹ Volver
-                </button>
-              )}
-            </div>
+            {selectedGroup && (
+              <button onClick={() => setSelectedGroup(null)} className="text-[8px] font-black text-primary border border-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-widest">
+                ‹ Volver
+              </button>
+            )}
           </div>
 
           {!selectedGroup ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-4">
-              {groups.sort((a, b) => a.orden - b.orden).map((g, idx) => {
+              {groups.map(g => {
                 const gid = g.grupo_id || g.nombre;
                 const status = getGroupStatus(gid);
-                
                 return (
-                  <div 
-                    key={g.id} 
-                    onClick={() => setSelectedGroup(gid)} 
-                    className="aspect-square bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all flex flex-col items-center gap-1.5 relative group justify-center rounded-[8px] shadow-lg p-2 cursor-pointer"
-                  >
+                  <div key={g.id} onClick={() => setSelectedGroup(gid)} className="aspect-square bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all cursor-pointer flex flex-col items-center gap-1.5 relative group justify-center rounded-[8px] shadow-lg p-2">
                      <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_10px_#00FF88]' : 'bg-red-500 shadow-[0_0_10px_#EF4444] animate-pulse'}`}></div>
-
                      <div className="relative w-[85%] h-[85%] flex items-center justify-center">
                         <div className="absolute inset-0 bg-primary/20 blur-[20px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                         <img 
-                          src={`/${g.imagen || g.image}`} 
+                          src={`/${g.image}`} 
                           className="w-full h-full object-contain mix-blend-screen group-hover:scale-110 transition-all duration-1000 relative z-10"
                           style={{ 
                             filter: 'brightness(1.6) contrast(1.2)',
@@ -192,30 +184,6 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                   REVISIONES E INSPECCIONES
                </h3>
            </div>
-           
-           {/* CONTADOR DE DÍAS PARA INSPECCIÓN OFICIAL */}
-           {(() => {
-             const nextReg = safePlan
-               .filter(p => p.tipo?.toUpperCase() === 'REGLAMENTARIO')
-               .sort((a, b) => new Date(a.proxima_fecha) - new Date(b.proxima_fecha))[0];
-             
-             if (!nextReg) return null;
-             
-             const days = Math.ceil((new Date(nextReg.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24));
-             const isUrgent = days <= 30;
-
-             return (
-               <div className={`mb-6 p-4 rounded-xl border ${isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-blue-500/10 border-blue-500/30'} animate-pulse`}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${isUrgent ? 'text-red-500' : 'text-blue-400'}`}>Plazo Legal Inspección</span>
-                    <span className="text-[10px] font-black text-white">{days} DÍAS</span>
-                  </div>
-                  <h4 className="text-[11px] font-bold text-white uppercase leading-tight mb-1">{nextReg.tarea}</h4>
-                  <p className="text-[8px] text-gray-500 font-bold uppercase">{nextReg.equipos?.nombre || 'EQUIPO PRINCIPAL'}</p>
-               </div>
-             );
-           })()}
-
             <div className="flex flex-col gap-4 border-l border-white/5 pl-4">
               {safePlan.filter(p => p.tipo?.toUpperCase().includes('REGLAMENTARIO') || p.prioridad === 'Alta').slice(0, 6).map((item, idx) => (
                 <div key={idx} className="flex flex-col gap-1 group cursor-default">

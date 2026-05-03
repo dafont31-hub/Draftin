@@ -1,228 +1,135 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { getOperationalTrends } from '../services/dataService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 
 const Analiticas = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeParam, setActiveParam] = useState('dureza');
-
-  const exportToExcel = async () => {
-    const { data: revisiones } = await supabase
-      .from('revisiones_diarias')
-      .select('fecha, datos_quimica')
-      .order('fecha', { ascending: false });
-
-    if (!revisiones) return;
-
-    const exportData = revisiones.map(r => ({
-      Fecha: r.fecha,
-      'C1 Dureza': r.datos_quimica.c1?.d || 0,
-      'C1 pH': r.datos_quimica.c1?.ph || 0,
-      'C1 Cond': r.datos_quimica.c1?.c || 0,
-      'C2 Dureza': r.datos_quimica.c2?.d || 0,
-      'C2 pH': r.datos_quimica.c2?.ph || 0,
-      'C2 Cond': r.datos_quimica.c2?.c || 0,
-      'Desg Dureza': r.datos_quimica.desg?.d || 0,
-      'Desg pH': r.datos_quimica.desg?.ph || 0,
-      'Desg Cond': r.datos_quimica.desg?.c || 0,
-      'Condensados Dureza': r.datos_quimica.cond?.d || 0,
-      'Condensados pH': r.datos_quimica.cond?.ph || 0,
-      'Condensados Cond': r.datos_quimica.cond?.c || 0,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Analiticas");
-    XLSX.writeFile(wb, `Reporte_Analitico_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
+  const [activeCategory, setActiveCategory] = useState('analitica');
+  const [variables, setVariables] = useState([]);
 
   useEffect(() => {
-    fetchAnaliticas();
-  }, []);
+    fetchData();
+  }, [activeCategory]);
 
-  const fetchAnaliticas = async () => {
-    const { data: revisiones, error } = await supabase
-      .from('revisiones_diarias')
-      .select('fecha, datos_quimica')
-      .order('fecha', { ascending: true })
-      .limit(30);
-
-    if (revisiones) {
-      const formattedData = revisiones.map(r => ({
-        fecha: new Date(r.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-        c1: parseFloat(r.datos_quimica?.c1?.[activeParam]) || 0,
-        c2: parseFloat(r.datos_quimica?.c2?.[activeParam]) || 0,
-        desg: parseFloat(r.datos_quimica?.desg?.[activeParam]) || 0,
-        cond: parseFloat(r.datos_quimica?.cond?.[activeParam]) || 0,
-      }));
-      setData(formattedData);
+  const fetchData = async () => {
+    setLoading(true);
+    const trends = await getOperationalTrends(activeCategory);
+    setData(trends);
+    
+    // Extraer nombres de variables únicas presentes en los datos
+    if (trends.length > 0) {
+      const keys = new Set();
+      trends.forEach(item => {
+        Object.keys(item).forEach(key => {
+          if (key !== 'fecha') keys.add(key);
+        });
+      });
+      setVariables(Array.from(keys));
+    } else {
+      setVariables([]);
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchAnaliticas();
-  }, [activeParam]);
-
-  const getLastValue = (paramKey) => {
-    if (data.length === 0) return 0;
-    const last = data[data.length - 1];
-    return Math.max(last.c1 || 0, last.c2 || 0, last.desg || 0, last.cond || 0);
+  const exportToExcel = () => {
+    if (data.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tendencias");
+    XLSX.writeFile(wb, `Reporte_${activeCategory}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const lastDureza = getLastValue('dureza');
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#0A0A0A] border border-[#222] p-3 shadow-2xl rounded-lg">
-          <p className="text-[10px] font-black text-white mb-2 uppercase tracking-widest">{label}</p>
-          {payload.map((entry, index) => (
-            <div key={index} className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
-              <span className="text-[9px] text-gray-400 uppercase font-bold">{entry.name}:</span>
-              <span className="text-[10px] text-white font-black">{entry.value}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const colors = ['#FF6B00', '#00FF88', '#00A3FF', '#FF0044', '#A3FF00', '#FFB800'];
 
   return (
     <div className="animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-           <h2 className="text-[14px] font-black text-white tracking-[0.2em] uppercase">Control Analítico</h2>
-           <p className="text-[8px] text-gray-500 font-bold uppercase mt-1 tracking-widest">Tendencia histórica de parámetros químicos</p>
+           <h2 className="text-[14px] font-black text-white tracking-[0.2em] uppercase">Inteligencia de Datos</h2>
+           <p className="text-[8px] text-gray-500 font-bold uppercase mt-1 tracking-widest">Visualización dinámica de datos clasificados automáticamente</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={exportToExcel}
             className="px-4 py-2 bg-[#1A1A1A] border border-[#222] text-[#FF6B00] text-[8px] font-black uppercase rounded-lg hover:bg-[#222] transition-all"
           >
-            Descargar Excel
+            Exportar Dataset
           </button>
           <div className="flex bg-[#111] p-1 rounded-lg border border-[#222]">
-             {['dureza', 'ph', 'conductividad'].map(p => (
+             {[
+               { id: 'analitica', label: '🧪 Química' },
+               { id: 'consumo', label: '⚡ Consumos' },
+               { id: 'operacion', label: '⚙️ Operación' },
+               { id: 'estado', label: '📊 Estado' }
+             ].map(cat => (
                 <button 
-                  key={p}
-                  onClick={() => setActiveParam(p)}
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
                   className={`px-3 py-1.5 text-[8px] font-black uppercase rounded transition-all ${
-                    activeParam === p ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/20' : 'text-gray-500 hover:text-gray-300'
+                    activeCategory === cat.id ? 'bg-[#FF6B00] text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
-                  {p}
+                  {cat.label}
                 </button>
              ))}
           </div>
         </div>
       </div>
 
-      <div className="industrial-card p-6 bg-[#0D0D0D] border-[#222] h-[400px] mb-6">
+      <div className="industrial-card p-6 bg-[#0D0D0D] border-[#222] h-[450px] mb-6">
         {loading ? (
           <div className="h-full flex items-center justify-center">
              <div className="w-8 h-8 border-4 border-[#FF6B00] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : (
+        ) : data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+            <LineChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-              <XAxis 
-                dataKey="fecha" 
-                stroke="#444" 
-                fontSize={8} 
-                tickLine={false} 
-                axisLine={false}
-                padding={{ left: 10, right: 10 }}
+              <XAxis dataKey="fecha" stroke="#444" fontSize={8} tickLine={false} axisLine={false} />
+              <YAxis stroke="#444" fontSize={8} tickLine={false} axisLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '12px', fontSize: '10px' }}
+                itemStyle={{ fontWeight: 'bold' }}
               />
-              <YAxis 
-                stroke="#444" 
-                fontSize={8} 
-                tickLine={false} 
-                axisLine={false} 
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                verticalAlign="top" 
-                align="right" 
-                iconType="circle"
-                wrapperStyle={{ paddingBottom: '20px', fontSize: '8px', fontWeight: 'bold', textTransform: 'uppercase' }} 
-              />
-              <Line 
-                name="Caldera 1" 
-                type="monotone" 
-                dataKey="c1" 
-                stroke="#FF0044" 
-                strokeWidth={3} 
-                dot={{ r: 3, fill: '#FF0044', strokeWidth: 0 }} 
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
-              <Line 
-                name="Caldera 2" 
-                type="monotone" 
-                dataKey="c2" 
-                stroke="#00FF88" 
-                strokeWidth={3} 
-                dot={{ r: 3, fill: '#00FF88', strokeWidth: 0 }} 
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
-              <Line 
-                name="Desgasificador" 
-                type="monotone" 
-                dataKey="desg" 
-                stroke="#FF6B00" 
-                strokeWidth={3} 
-                dot={{ r: 3, fill: '#FF6B00', strokeWidth: 0 }} 
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
-              <Line 
-                name="Condensados" 
-                type="monotone" 
-                dataKey="cond" 
-                stroke="#00A3FF" 
-                strokeWidth={3} 
-                dot={{ r: 3, fill: '#00A3FF', strokeWidth: 0 }} 
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
+              <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '30px', fontSize: '8px', fontWeight: 'bold', textTransform: 'uppercase' }} />
+              {variables.map((v, i) => (
+                <Line 
+                  key={v}
+                  name={v}
+                  type="monotone"
+                  dataKey={v}
+                  stroke={colors[i % colors.length]}
+                  strokeWidth={3}
+                  dot={{ r: 3, fill: colors[i % colors.length], strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
+                  connectNulls
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-gray-600 gap-4">
+             <svg className="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 02 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+             <p className="text-[10px] font-black uppercase tracking-widest">No hay datos clasificados en esta categoría</p>
+          </div>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-         <div className="industrial-card p-4 bg-[#0A0A0A] border-[#222]">
-            <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter">Última Lectura {activeParam}</span>
-            <div className="flex items-end gap-2 mt-1">
-               <span className={`text-[20px] font-black leading-none ${activeParam === 'dureza' && lastDureza > 0.5 ? 'text-red-500' : 'text-[#00FF88]'}`}>
-                 {data.length > 0 ? getLastValue(activeParam).toFixed(1) : '0'}
-               </span>
-               <span className="text-[8px] text-gray-600 font-bold mb-1 uppercase">
-                 {activeParam === 'dureza' ? '°fH' : activeParam === 'ph' ? 'pH' : 'µS/cm'}
-               </span>
+      {/* Tarjetas de Resumen Dinámicas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+         {variables.slice(0, 4).map((v, i) => (
+            <div key={v} className="industrial-card p-5 bg-[#0D0D0D] border-[#222]">
+               <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter block mb-2">{v}</span>
+               <div className="flex items-end gap-2">
+                  <span className="text-[22px] font-black leading-none text-white">
+                    {data[data.length-1]?.[v] || 0}
+                  </span>
+                  <div className="w-2 h-2 rounded-full mb-1.5" style={{ backgroundColor: colors[i % colors.length] }}></div>
+               </div>
             </div>
-         </div>
-         <div className="industrial-card p-4 bg-[#0A0A0A] border-[#222]">
-            <span className="text-[7px] text-gray-500 font-black uppercase tracking-tighter">Estado Tratamiento</span>
-            <div className="flex items-center gap-2 mt-1">
-               {data.length > 0 ? (
-                 <>
-                   <div className={`w-2 h-2 rounded-full animate-pulse ${lastDureza > 0.5 ? 'bg-red-500' : 'bg-[#00FF88]'}`}></div>
-                   <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                     {lastDureza > 0.5 ? 'ALERTA' : 'OPTIMO'}
-                   </span>
-                 </>
-               ) : (
-                 <>
-                   <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">SIN DATOS</span>
-                 </>
-               )}
-            </div>
-         </div>
+         ))}
       </div>
     </div>
   );

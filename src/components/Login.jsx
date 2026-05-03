@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { Shield, Key, Mail, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('login');
-  const [branding, setBranding] = useState({ empresa_nombre: 'DRAFTIN', logo_url: '/boiler_3d.png', color_primario: '#FF6B00' });
+  const [view, setView] = useState('login'); // 'login', 'signup', 'reset'
+  const [branding, setBranding] = useState({ 
+    empresa_nombre: 'DRAFTIN', 
+    logo_url: '/boiler_3d.png', 
+    color_primario: '#FF6B00',
+    welcome_msg: 'Industrial Asset Intelligence'
+  });
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchBranding();
   }, []);
 
@@ -23,7 +29,7 @@ const Login = () => {
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
+    if (error) setError(error.message === 'Invalid login credentials' ? 'CREDENCIALES NO VÁLIDAS' : error.message);
     setLoading(false);
   };
 
@@ -33,117 +39,125 @@ const Login = () => {
     setError(null);
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) setError(error.message);
-    else setError('REGISTRO_SOLICITADO: REVISA TU EMAIL PARA VALIDAR CREDENCIALES.');
+    else setError('REGISTRO ENVIADO: CONFIRMA TU EMAIL.');
     setLoading(false);
   };
 
-  const handleResetPassword = async () => {
-    if (!email) return setError('Introduce tu email para recuperar la contraseña.');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!email) return setError('INTRODUCE TU EMAIL');
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) setError(error.message);
-    else setError('ENLACE ENVIADO: REVISA TU BANDEJA DE ENTRADA.');
+    else setError('ENLACE ENVIADO A TU EMAIL');
+    setLoading(false);
   };
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-6 selection:bg-primary selection:text-black font-sans overflow-y-auto relative"
-      style={{ 
-        backgroundImage: branding.bg_login_url ? `url(${branding.bg_login_url})` : 'none',
+      className="min-h-screen flex items-center justify-center p-6 selection:bg-primary selection:text-black font-sans relative overflow-hidden"
+      style={{
+        backgroundImage: 'url("/bg_login.png")',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundColor: '#0A0A0A'
+        backgroundPosition: 'center'
       }}
     >
-      {/* Overlay para legibilidad si hay fondo */}
-      {branding.bg_login_url && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>}
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-[1px]"></div>
       
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-1000 relative z-10">
+      <div className="w-full max-w-[280px] z-10 animate-in fade-in zoom-in-95 duration-700">
         
-        {/* Brand Identity */}
-        <div className="text-center mb-6 md:mb-10">
-          <div className="inline-block border-2 border-primary/30 p-2 md:p-4 rounded-[1.5rem] md:rounded-[2rem] mb-3 md:mb-6 shadow-[0_0_60px_rgba(255,107,0,0.2)] bg-black/40 relative group">
-            <div className="absolute inset-0 bg-primary/10 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <img src={branding.logo_url} alt="Logo" className="w-10 h-10 md:w-20 md:h-20 object-contain mix-blend-screen brightness-125 relative z-10" />
-          </div>
-          <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter uppercase italic leading-none mb-1 drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">{branding.empresa_nombre}</h1>
-          <p className="text-[6px] md:text-[9px] text-primary font-black uppercase tracking-[0.3em] md:tracking-[0.8em] mb-4 md:mb-8 drop-shadow-[0_0_10px_rgba(255,107,0,0.5)] opacity-80">
-            {branding.welcome_msg || 'Industrial Asset Intelligence'}
-          </p>
-        </div>
-
-        <div className="bg-[#1A1A1A] border border-[#2D2D2D] rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-[0_40px_80px_rgba(0,0,0,1)] relative overflow-hidden">
-          {/* Subtle Industrial Texture */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none opacity-20"></div>
+        <div className="bg-[#0D0D0D]/95 border border-white/10 rounded-[2.5rem] p-6 shadow-[0_30px_100px_rgba(0,0,0,1)] relative overflow-hidden backdrop-blur-xl">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent"></div>
           
+          {/* Header Compacto */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-black/50 border border-white/5 rounded-[2rem] shadow-2xl mb-3 group transition-all hover:border-primary/50">
+               <img 
+                 src="/master_logo.png" 
+                 alt="Logo" 
+                 className="w-14 h-14 object-contain brightness-125"
+                 onError={(e) => e.target.src = "/boiler_3d.png"}
+               />
+            </div>
+            <h1 className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">{branding.empresa_nombre}</h1>
+            <p className="text-[5px] font-black text-primary uppercase tracking-[0.5em] mt-1 opacity-60 italic">Core_Access_v4</p>
+          </div>
+
           {error && (
-            <div className="mb-6 p-4 bg-red-600/10 border-l-4 border-neon-orange text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg relative z-10 italic">
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-[8px] font-black uppercase tracking-widest rounded-xl text-center">
               {error}
             </div>
           )}
 
           {view === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-5 md:space-y-8 relative z-10">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-industrial-title uppercase tracking-[0.4em] ml-2 block opacity-40 italic">Terminal_ID</label>
-                <input 
-                  type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-[#050505] border border-white/5 p-3 md:p-5 rounded-xl text-white outline-none focus:border-neon-orange transition-all font-black text-xs md:text-base placeholder:text-white/5 shadow-inner italic"
-                  placeholder="user@calderas.local"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-2">
-                  <label className="text-[9px] font-black text-industrial-title uppercase tracking-[0.4em] block opacity-40 italic">Master_Key</label>
-                  <button type="button" onClick={handleResetPassword} className="text-[8px] text-neon-orange font-black uppercase tracking-widest opacity-60 hover:opacity-100">¿Olvido?</button>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1 block opacity-40">User_ID</label>
+                <div className="relative group">
+                  <Mail size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" />
+                  <input 
+                    type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                    className="w-full bg-black border border-white/5 p-3 pl-10 rounded-xl text-white outline-none focus:border-primary transition-all font-bold text-[12px]"
+                    placeholder="email@draftin.local"
+                  />
                 </div>
-                <input 
-                  type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#050505] border border-white/5 p-3 md:p-5 rounded-xl text-white outline-none focus:border-neon-orange transition-all font-black text-xs md:text-base placeholder:text-white/5 shadow-inner"
-                  placeholder="••••••••"
-                />
               </div>
+              
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest block opacity-40">Access_Key</label>
+                  <button type="button" onClick={() => setView('reset')} className="text-[7px] text-primary/50 font-black uppercase hover:text-primary transition-colors">¿Olvido?</button>
+                </div>
+                <div className="relative group">
+                  <Key size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" />
+                  <input 
+                    type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                    className="w-full bg-black border border-white/5 p-3 pl-10 rounded-xl text-white outline-none focus:border-primary transition-all font-bold text-[12px]"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
               <button 
                 type="submit" disabled={loading}
-                style={{ backgroundColor: branding.color_primario }}
-                className="w-full hover:brightness-125 text-black font-black py-4 md:py-6 rounded-xl shadow-[0_20px_40px_rgba(255,107,0,0.3)] transform active:scale-[0.98] transition-all text-[9px] md:text-xs tracking-[0.4em] md:tracking-[0.6em] uppercase border-t-2 md:border-t-4 border-white/40 italic"
+                className="w-full py-4 bg-primary text-black font-black rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all text-[9px] tracking-[0.4em] uppercase flex items-center justify-center gap-2 mt-2"
               >
-                {loading ? 'AUTENTICANDO...' : 'INICIAR ACCESO MAESTRO'}
+                {loading ? <Loader2 className="animate-spin" size={14} /> : 'CONECTAR'}
+                {!loading && <ArrowRight size={14} />}
               </button>
+
+              <div className="pt-2 text-center">
+                <button type="button" onClick={() => setView('signup')} className="text-[7px] font-black text-gray-700 uppercase tracking-widest hover:text-white transition-colors">Crear Nueva Terminal</button>
+              </div>
+            </form>
+          ) : view === 'signup' ? (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <h3 className="text-white font-black text-center mb-4 uppercase tracking-[0.4em] text-[8px] italic">Nuevo Registro</h3>
+              <div className="space-y-3">
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black border border-white/5 p-3 rounded-xl text-white outline-none focus:border-primary font-bold text-[12px]" placeholder="EMAIL CORPORATIVO" />
+                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-black border border-white/5 p-3 rounded-xl text-white outline-none focus:border-primary font-bold text-[12px]" placeholder="PASSWORD" />
+              </div>
+              <button type="submit" disabled={loading} className="w-full bg-white text-black font-black py-4 rounded-xl uppercase tracking-[0.4em] text-[9px] shadow-2xl hover:bg-primary transition-all italic">
+                REGISTRAR
+              </button>
+              <button type="button" onClick={() => setView('login')} className="w-full text-[7px] font-black text-gray-600 uppercase tracking-widest italic hover:text-white transition-colors">← Volver</button>
             </form>
           ) : (
-            <form onSubmit={handleSignUp} className="space-y-5 md:space-y-8 relative z-10">
-              <h3 className="text-white font-black text-center mb-6 uppercase tracking-[0.5em] text-[10px] italic">Alta de Nueva Terminal</h3>
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-industrial-title uppercase tracking-[0.4em] ml-2 block opacity-40 italic">Email Corporativo</label>
-                <input 
-                  type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-[#050505] border border-white/5 p-3 md:p-5 rounded-xl text-white outline-none focus:border-neon-orange font-black text-xs md:text-base shadow-inner italic uppercase"
-                  placeholder="NEW@CALDERAS.LOCAL"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-industrial-title uppercase tracking-[0.4em] ml-2 block opacity-40 italic">Password_Master</label>
-                <input 
-                  type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#050505] border border-white/5 p-3 md:p-5 rounded-xl text-white outline-none focus:border-neon-orange font-black text-xs md:text-base shadow-inner"
-                  placeholder="••••••••"
-                />
-              </div>
-              <button type="submit" disabled={loading} className="w-full bg-white text-black font-black py-4 md:py-6 rounded-xl uppercase tracking-[0.4em] md:tracking-[0.6em] text-[9px] md:text-xs border-t-2 md:border-t-4 border-black/10 shadow-2xl hover:bg-neon-orange transition-all italic">
-                CREAR CREDENCIALES
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <h3 className="text-white font-black text-center mb-4 uppercase tracking-[0.4em] text-[8px] italic">Recuperar Acceso</h3>
+              <p className="text-[8px] text-gray-500 text-center uppercase font-bold px-4 mb-4">Introduce tu email para recibir un enlace de restauración.</p>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black border border-white/5 p-3 rounded-xl text-white outline-none focus:border-primary font-bold text-[12px]" placeholder="EMAIL@DRAFTIN.LOCAL" />
+              <button type="submit" disabled={loading} className="w-full bg-primary text-black font-black py-4 rounded-xl uppercase tracking-[0.4em] text-[9px] flex items-center justify-center gap-2">
+                 <RefreshCw size={14} /> ENVIAR ENLACE
               </button>
-              <button type="button" onClick={() => setView('login')} className="w-full text-[9px] font-black text-industrial-title uppercase tracking-[0.4em] opacity-40 italic hover:text-white transition-colors">← Volver al Terminal Principal</button>
+              <button type="button" onClick={() => setView('login')} className="w-full text-[7px] font-black text-gray-600 uppercase tracking-widest italic hover:text-white transition-colors">← Volver</button>
             </form>
           )}
         </div>
         
-        <div className="mt-12 md:mt-20 flex justify-center items-center gap-8 opacity-10">
-           <div className="h-[1px] flex-1 bg-white"></div>
-           <p className="text-[7px] md:text-[9px] font-black text-white uppercase tracking-[1em] whitespace-nowrap italic">SECURE_DRAFTIN_SYS_3.1</p>
-           <div className="h-[1px] flex-1 bg-white"></div>
-        </div>
+        <p className="mt-8 text-center text-[5px] font-black text-white/10 uppercase tracking-[1em] italic">
+          Draftin_Security_Terminal_v4.2
+        </p>
       </div>
     </div>
   );

@@ -10,8 +10,8 @@ import Equipos from './components/Equipos'
 import GestionUsuarios from './components/GestionUsuarios'
 import Configuracion from './components/Configuracion'
 import AIChat from './components/AIChat'
-import { fetchCoreData } from './services/dataService'
-import { Activity, Layout, Settings, Database, Cpu, FileText, BarChart2, Shield, MessageSquare, AlertTriangle, Droplet, LogOut } from 'lucide-react'
+import BibliotecaDocs from './components/BibliotecaDocs'
+import { Activity, Layout, Settings, Database, Cpu, FileText, BarChart2, Shield, MessageSquare, AlertTriangle, Droplet } from 'lucide-react'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -26,7 +26,6 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [appConfigGrupos, setAppConfigGrupos] = useState([])
   const [branding, setBranding] = useState({ empresa_nombre: 'DRAFTIN INDUSTRIAL', color_primario: '#FF6B00', logo_url: null })
-  const [uiConfig, setUiConfig] = useState({ border_radius: '1.5rem', glass_opacity: '0.1', card_bg: '#111' })
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -44,29 +43,14 @@ function App() {
 
   async function fetchUserRole(s) {
     try {
-      const { data, error } = await supabase.from('perfiles').select('rol, nombre').eq('email', s.user.email).single()
-      if (error) {
-        console.warn("No se encontró perfil para este usuario, usando valores por defecto.");
-        setUserRole('operario');
-        setUserName(s.user.email.split('@')[0]);
-        return;
-      }
+      const { data } = await supabase.from('perfiles').select('rol, nombre').eq('email', s.user.email).single()
       if (data) { 
         setUserRole(data.rol.toLowerCase()); 
         setUserName(data.nombre); 
-      }
-    } catch (e) { 
-      console.error("Error en fetchUserRole:", e);
-      setUserRole('operario');
-    }
+      } else setUserRole('admin')
+    } catch (e) { setUserRole('admin') }
     setLoading(false)
   }
-
-  const handleLogout = async () => {
-    if (window.confirm('¿Cerrar sesión del terminal?')) {
-      await supabase.auth.signOut();
-    }
-  };
 
   useEffect(() => {
     if (session) {
@@ -75,7 +59,6 @@ function App() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_pestanas' }, () => fetchSaaSConfig())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_branding' }, () => fetchSaaSConfig())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_grupos' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_ui' }, () => fetchSaaSConfig())
         .subscribe()
       return () => supabase.removeChannel(channel)
     }
@@ -86,30 +69,12 @@ function App() {
       const { data: nav, error: e1 } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden')
       const { data: brand, error: e2 } = await supabase.from('app_config_branding').select('*').single()
       const { data: groups, error: e3 } = await supabase.from('app_config_grupos').select('*').order('orden')
-      const { data: ui, error: e4 } = await supabase.from('app_config_ui').select('*').single()
       
       if (e1) console.error("Error cargando pestañas:", e1);
       if (e2) console.error("Error cargando branding:", e2);
       if (e3) console.error("Error cargando grupos:", e3);
-      if (e4) console.error("Error cargando UI:", e4);
 
-      if (nav && nav.length > 0) {
-        setNavItems(nav);
-      } else if (nav && nav.length === 0) {
-        console.warn("No hay pestañas activas. Restaurando valores por defecto...");
-        const defaults = [
-          { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin', 'operario'], activo: true },
-          { label: 'TAREAS', icon: 'tool', tab_id: 'ordenes', orden: 2, roles: ['admin', 'operario'], activo: true },
-          { label: 'DATOS', icon: 'edit', tab_id: 'recogida', orden: 3, roles: ['admin', 'operario'], activo: true },
-          { label: 'CONFIG', icon: 'configuracion', tab_id: 'configuracion', orden: 10, roles: ['admin'], activo: true }
-        ];
-        for (const t of defaults) {
-          await supabase.from('app_config_pestanas').upsert(t, { onConflict: 'tab_id' });
-        }
-        const { data: retryNav } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden');
-        if (retryNav) setNavItems(retryNav);
-      }
-      
+      if (nav) setNavItems(nav)
       if (groups) setAppConfigGrupos(groups)
       if (brand) {
         setBranding(brand)
@@ -122,11 +87,17 @@ function App() {
 
   async function fetchData() {
     try {
-      const coreData = await fetchCoreData();
+      const { data: e, error: errE } = await supabase.from('equipos').select('*').order('sistema')
+      const { data: o, error: errO } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
+      const { data: p, error: errP } = await supabase.from('plan_mantenimiento').select('*, equipos(nombre)')
       
-      setEquipos(coreData.equipos);
-      setOrdenes([]); // Mantener la política de empezar de cero en OTs si así se desea
-      setPlanMantenimiento(coreData.planMantenimiento);
+      if (errE) console.error("Error cargando equipos:", errE);
+      if (errO) console.error("Error cargando órdenes:", errO);
+      if (errP) console.error("Error cargando plan:", errP);
+
+      if (e) setEquipos(e)
+      if (o) setOrdenes([]) // Se fuerza a vacío por solicitud del usuario para empezar de cero
+      if (p) setPlanMantenimiento(p)
     } catch (e) {
       console.error("Error crítico en fetchData:", e);
     }
@@ -152,19 +123,10 @@ function App() {
   }
 
   const visibleNavItems = navItems.filter(item => {
-    // La configuración siempre se oculta del sidebar para estar en el gear del header
-    if (['configuracion', 'config'].includes(item.tab_id?.toLowerCase())) return false;
-    
-    // Si no tiene roles definidos, la mostramos a todos
-    if (!item.roles || (Array.isArray(item.roles) && item.roles.length === 0)) return true;
-    
-    // Normalizar roles para comparación
-    const currentRole = userRole?.toLowerCase() || 'admin';
-    const itemRoles = Array.isArray(item.roles) 
-      ? item.roles.map(r => r.toLowerCase()) 
-      : [item.roles?.toString().toLowerCase()];
-      
-    return itemRoles.includes(currentRole);
+    if (['configuracion', 'config'].includes(item.tab_id.toLowerCase())) return false;
+    if (!item.roles || !userRole) return true;
+    const itemRoles = Array.isArray(item.roles) ? item.roles.map(r => r.toLowerCase()) : [];
+    return itemRoles.includes(userRole);
   });
 
   return (
@@ -202,21 +164,11 @@ function App() {
                 <div className="w-2 h-2 bg-[#00FF88] rounded-full shadow-[0_0_12px_#00FF88] animate-pulse"></div>
                 <span className="text-[9px] font-black uppercase text-gray-500 tracking-[0.3em]">SaaS_Core_Active</span>
              </div>
-             <div className="flex items-center gap-2">
-                <div 
-                  onClick={() => setActiveTab('configuracion')}
-                  className="w-12 h-12 bg-[#0A0A0A] border border-white/10 rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary cursor-pointer transition-all hover:border-primary/50 group"
-                  title="Configuración"
-                >
-                  <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-                </div>
-                <div 
-                  onClick={handleLogout}
-                  className="w-12 h-12 bg-[#0A0A0A] border border-white/10 rounded-2xl flex items-center justify-center text-gray-500 hover:text-red-500 cursor-pointer transition-all hover:border-red-500/50 group"
-                  title="Cerrar Sesión"
-                >
-                  <LogOut size={20} />
-                </div>
+             <div 
+               onClick={() => setActiveTab('configuracion')}
+               className="w-12 h-12 bg-[#0A0A0A] border border-white/10 rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary cursor-pointer transition-all hover:border-primary/50 group"
+             >
+               <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
              </div>
           </div>
         </header>

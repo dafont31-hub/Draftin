@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-main: #0A0A0A;
+  --bg-card: #141414;
+  --border-main: #222222;
+  --primary-color: #FF6B00;
+  --primary-color-rgb: 255, 107, 0;
+  --accent-green: #00FF88;
+  --accent-red: #FF0044;
+  --border-radius: 1.5rem;
+  --glass-opacity: 0.1;
+  --card-bg: #111;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: #FFFFFF;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tarjeta Industrial Base */
+.industrial-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.industrial-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,var(--glass-opacity)) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Scrollbar Oculto */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
