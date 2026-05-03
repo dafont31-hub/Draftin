@@ -122,61 +122,64 @@ const Equipos = ({ equipos = [], categories = [] }) => {
         ))}
       </div>
 
-      {/* Grilla de equipos rediseñada */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-24">
+      {/* Grilla de equipos rediseñada a MINI-CARDS ultra-compactas */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 pb-24">
         {filteredEquipos.length > 0 ? (
           filteredEquipos.map((eq) => (
-            <div key={eq.id} className="industrial-card p-4 flex flex-col items-center text-center cursor-pointer bg-[#141414] border-[#222] hover:border-[#FF6B00]/40 transition-all group relative rounded-2xl">
-              {/* Status LED flotante */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full border border-white/5 backdrop-blur-md">
-                 <div className={`w-1.5 h-1.5 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`}></div>
-                 <span className="text-[7px] font-black uppercase text-gray-400 tracking-widest">{eq.estado}</span>
+            <div key={eq.id} className="industrial-card p-2 flex flex-col items-center text-center cursor-pointer bg-[#141414] border-[#222] hover:border-[#FF6B00]/40 transition-all group relative rounded-xl shadow-lg">
+              {/* Status LED flotante (Mini) */}
+              <div className="absolute top-1.5 right-1.5">
+                 <div className={`w-1.5 h-1.5 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse shadow-[0_0_6px_currentColor]' : ''}`}></div>
               </div>
 
-              {/* ID Técnico flotante arriba izquierda */}
-              <div className="absolute top-3 left-3">
+              {/* ID Técnico flotante (Micro) */}
+              <div className="absolute top-1.5 left-1.5">
                 <input 
-                  className="bg-transparent border-none text-[7px] font-black text-gray-600 uppercase tracking-widest w-16 outline-none focus:text-primary transition-colors"
+                  className="bg-transparent border-none text-[5.5px] font-black text-gray-700 uppercase tracking-tighter w-12 outline-none focus:text-primary transition-colors p-0"
                   defaultValue={eq.id_tecnico}
                   onBlur={async (e) => {
                     const { error } = await supabase.from('equipos').update({ id_tecnico: e.target.value }).eq('id', eq.id);
                     if (!error) {
-                      setSaveMsg('ID actualizado');
+                      setSaveMsg('ID ok');
                       setTimeout(() => setSaveMsg(null), 2000);
                     }
                   }}
                 />
               </div>
 
-              {/* Contenedor Imagen (Cuadrado y destacado) */}
-              <div className="w-full aspect-square flex items-center justify-center p-4 bg-[#0A0A0A] rounded-xl border border-[#222] mb-4 group-hover:border-[#FF6B00]/20 transition-all relative overflow-hidden mt-4">
+              {/* Contenedor Imagen (Mini) */}
+              <div className="w-full aspect-square flex items-center justify-center p-2 bg-[#0A0A0A] rounded-lg border border-[#222] mb-1.5 group-hover:border-[#FF6B00]/20 transition-all relative overflow-hidden mt-2">
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <img 
                   src={`/${getImage(eq.nombre)}`} 
-                  className="w-full h-full object-contain mix-blend-lighten drop-shadow-2xl group-hover:scale-110 transition-transform duration-500" 
+                  className="w-[90%] h-[90%] object-contain mix-blend-lighten drop-shadow-xl group-hover:scale-110 transition-transform duration-500" 
                   style={{ filter: getFilter(eq.nombre) }}
                   alt="" 
                 />
               </div>
               
-              {/* Información Inferior */}
-              <div className="w-full space-y-1">
+              {/* Información Inferior (Ultra-compacta) */}
+              <div className="w-full space-y-0.5">
                 <input 
-                  className="bg-transparent border-none text-white text-[11px] font-black uppercase tracking-wider focus:ring-0 p-0 w-full text-center hover:text-primary transition-colors"
+                  className="bg-transparent border-none text-white text-[8.5px] font-black uppercase tracking-tight focus:ring-0 p-0 w-full text-center hover:text-primary transition-colors leading-tight"
                   defaultValue={eq.nombre}
                   onBlur={async (e) => {
                     const { error } = await supabase.from('equipos').update({ nombre: e.target.value }).eq('id', eq.id);
                     if (!error) {
-                      setSaveMsg('Nombre guardado');
+                      setSaveMsg('Guardado');
                       setTimeout(() => setSaveMsg(null), 2000);
                     }
                   }}
                 />
-                <p className="text-[8px] font-bold text-gray-600 uppercase tracking-[0.2em]">{eq.sistema || 'General'}</p>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-[6px] font-black uppercase text-gray-500 tracking-widest">{eq.estado}</span>
+                  <span className="text-gray-800 text-[6px]">•</span>
+                  <p className="text-[6px] font-bold text-gray-700 uppercase tracking-tighter truncate max-w-[40px]">{eq.sistema || 'General'}</p>
+                </div>
               </div>
 
-              {/* Botón de acción rápido (Hover) */}
-              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl border border-primary/20"></div>
+              {/* Efecto Hover Glow */}
+              <div className="absolute inset-0 bg-primary/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-xl border border-primary/10"></div>
             </div>
           ))
         ) : (
