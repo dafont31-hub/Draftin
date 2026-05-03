@@ -122,69 +122,69 @@ const Equipos = ({ equipos = [], categories = [] }) => {
         ))}
       </div>
 
-      {/* Lista de equipos */}
-      <div className="flex flex-col gap-3 pb-24">
+      {/* Grilla de equipos rediseñada */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-24">
         {filteredEquipos.length > 0 ? (
           filteredEquipos.map((eq) => (
-            <div key={eq.id} className="industrial-card p-3.5 flex items-center justify-between cursor-pointer bg-[#141414] border-[#222] hover:border-[#333] transition-all group">
-              {/* Imagen Izquierda */}
-              <div className="w-16 h-16 flex items-center justify-center p-2 bg-[#0A0A0A] rounded-xl border border-[#222] mr-4 group-hover:border-[#FF6B00]/30 transition-colors">
+            <div key={eq.id} className="industrial-card p-4 flex flex-col items-center text-center cursor-pointer bg-[#141414] border-[#222] hover:border-[#FF6B00]/40 transition-all group relative rounded-2xl">
+              {/* Status LED flotante */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full border border-white/5 backdrop-blur-md">
+                 <div className={`w-1.5 h-1.5 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`}></div>
+                 <span className="text-[7px] font-black uppercase text-gray-400 tracking-widest">{eq.estado}</span>
+              </div>
+
+              {/* ID Técnico flotante arriba izquierda */}
+              <div className="absolute top-3 left-3">
+                <input 
+                  className="bg-transparent border-none text-[7px] font-black text-gray-600 uppercase tracking-widest w-16 outline-none focus:text-primary transition-colors"
+                  defaultValue={eq.id_tecnico}
+                  onBlur={async (e) => {
+                    const { error } = await supabase.from('equipos').update({ id_tecnico: e.target.value }).eq('id', eq.id);
+                    if (!error) {
+                      setSaveMsg('ID actualizado');
+                      setTimeout(() => setSaveMsg(null), 2000);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Contenedor Imagen (Cuadrado y destacado) */}
+              <div className="w-full aspect-square flex items-center justify-center p-4 bg-[#0A0A0A] rounded-xl border border-[#222] mb-4 group-hover:border-[#FF6B00]/20 transition-all relative overflow-hidden mt-4">
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <img 
                   src={`/${getImage(eq.nombre)}`} 
-                  className="w-full h-full object-contain mix-blend-lighten drop-shadow-xl" 
+                  className="w-full h-full object-contain mix-blend-lighten drop-shadow-2xl group-hover:scale-110 transition-transform duration-500" 
                   style={{ filter: getFilter(eq.nombre) }}
                   alt="" 
                 />
               </div>
               
-              {/* Contenido Central */}
-              <div className="flex-1 flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-1">
-                  <input 
-                    className="bg-transparent border-none text-white text-[12px] font-black uppercase tracking-wide focus:ring-0 p-0 w-full"
-                    defaultValue={eq.nombre}
-                    onBlur={async (e) => {
-                      const { error } = await supabase.from('equipos').update({ nombre: e.target.value }).eq('id', eq.id);
-                      if (!error) {
-                        setSaveMsg('Equipo actualizado');
-                        setTimeout(() => setSaveMsg(null), 2000);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                   <div className={`w-2 h-2 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse' : ''}`}></div>
-                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{eq.estado}</p>
-                   <span className="text-[#333] text-[10px]">•</span>
-                   <p className="text-[9px] font-medium text-gray-600 uppercase tracking-tight">{eq.sistema || 'General'}</p>
-                </div>
-              </div>
-
-              {/* ID y Flecha Derecha */}
-              <div className="flex flex-col items-end justify-between h-14 pl-4 border-l border-[#222]">
+              {/* Información Inferior */}
+              <div className="w-full space-y-1">
                 <input 
-                  className="bg-[#0A0A0A] border border-[#222] text-[8px] font-black text-gray-500 px-1.5 py-0.5 rounded tracking-widest uppercase text-right w-20 outline-none focus:border-primary/50"
-                  defaultValue={eq.id_tecnico}
+                  className="bg-transparent border-none text-white text-[11px] font-black uppercase tracking-wider focus:ring-0 p-0 w-full text-center hover:text-primary transition-colors"
+                  defaultValue={eq.nombre}
                   onBlur={async (e) => {
-                    const { error } = await supabase.from('equipos').update({ id_tecnico: e.target.value }).eq('id', eq.id);
+                    const { error } = await supabase.from('equipos').update({ nombre: e.target.value }).eq('id', eq.id);
                     if (!error) {
-                      setSaveMsg('ID Técnico actualizado');
+                      setSaveMsg('Nombre guardado');
                       setTimeout(() => setSaveMsg(null), 2000);
                     }
                   }}
                 />
-                <svg className="w-4 h-4 text-gray-500 group-hover:text-[#FF6B00] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <p className="text-[8px] font-bold text-gray-600 uppercase tracking-[0.2em]">{eq.sistema || 'General'}</p>
               </div>
+
+              {/* Botón de acción rápido (Hover) */}
+              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl border border-primary/20"></div>
             </div>
           ))
         ) : (
-          <div className="py-20 flex flex-col items-center justify-center opacity-30">
+          <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30">
             <svg className="w-12 h-12 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <p className="text-[10px] font-black uppercase tracking-widest">No hay equipos en esta categoría</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">No hay unidades en esta sección</p>
           </div>
         )}
       </div>
