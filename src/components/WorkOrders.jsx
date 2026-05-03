@@ -63,8 +63,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
       ["Técnico", order.tecnico_asignado || 'Sin asignar'],
       ["Fecha", new Date(order.created_at).toLocaleDateString()]
     ];
-    
-    doc.autoTable({
+     doc.autoTable({
       startY: 60,
       body: info,
       theme: 'plain',
@@ -73,7 +72,11 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     });
     
     // Descripción
-    const finalY = doc.lastAutoTable.finalY + 10;
+    let finalY = 110;
+    if (doc.lastAutoTable && doc.lastAutoTable.finalY) {
+      finalY = doc.lastAutoTable.finalY + 10;
+    }
+
     doc.setFont("helvetica", "bold");
     doc.text("OBSERVACIONES TÉCNICAS:", 15, finalY);
     doc.setFont("helvetica", "normal");
@@ -87,25 +90,30 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     doc.setFontSize(11);
     doc.text("EVIDENCIA FOTOGRÁFICA", 15, photoY);
     
-    // Renderizado de fotos (Antes y Después)
+    // Renderizado de fotos (Antes y Después) con seguridad total
     const imgWidth = 85;
     const imgHeight = 65;
     
-    if (order.foto_antes || fotoAntes) {
-      try {
-        doc.addImage(order.foto_antes || fotoAntes, 'JPEG', 15, photoY + 5, imgWidth, imgHeight);
+    const drawPhoto = (photoData, x, label) => {
+      if (photoData && photoData.startsWith('data:image')) {
+        try {
+          doc.addImage(photoData, 'JPEG', x, photoY + 5, imgWidth, imgHeight);
+          doc.setFontSize(8);
+          doc.text(label, x, photoY + imgHeight + 10);
+        } catch (e) {
+          doc.rect(x, photoY + 5, imgWidth, imgHeight);
+          doc.text("ERROR CARGANDO IMAGEN", x + 5, photoY + 35);
+        }
+      } else {
+        doc.setDrawColor(200);
+        doc.rect(x, photoY + 5, imgWidth, imgHeight);
         doc.setFontSize(8);
-        doc.text("ESTADO INICIAL (ANTES)", 15, photoY + imgHeight + 10);
-      } catch (e) { console.error("Error PDF Foto Antes", e); }
-    }
-    
-    if (order.foto_despues || fotoDespues) {
-      try {
-        doc.addImage(order.foto_despues || fotoDespues, 'JPEG', 110, photoY + 5, imgWidth, imgHeight);
-        doc.setFontSize(8);
-        doc.text("ESTADO FINAL (DESPUÉS)", 110, photoY + imgHeight + 10);
-      } catch (e) { console.error("Error PDF Foto Después", e); }
-    }
+        doc.text(`SIN FOTO ${label}`, x + 25, photoY + 35);
+      }
+    };
+
+    drawPhoto(order.foto_antes || fotoAntes, 15, "ESTADO INICIAL (ANTES)");
+    drawPhoto(order.foto_despues || fotoDespues, 110, "ESTADO FINAL (DESPUÉS)");
     
     // Pie de página
     doc.setFontSize(8);
@@ -117,30 +125,40 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
   const generateBulkPDF = () => {
     const doc = new jsPDF();
-    const completedOrders = ordenes.filter(o => o.estado === 'Finalizada');
-    if (completedOrders.length === 0) {
-      alert('No hay órdenes finalizadas para reportar.');
+    if (ordenes.length === 0) {
+      alert('No hay órdenes para reportar.');
       return;
     }
+    
     doc.setFontSize(20);
-    doc.text("DRAFTIN - REPORTE TÉCNICO", 14, 22);
+    doc.text("DRAFTIN - REPORTE DE ACTIVIDAD", 14, 22);
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Informe de Auditoría de Mantenimiento - Generado el ${new Date().toLocaleDateString()}`, 14, 30);
-    const tableData = completedOrders.map(o => {
+    doc.text(`Resumen General de Mantenimiento - Generado el ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    const tableData = ordenes.map(o => {
       const eq = equipos.find(e => e.id === o.equipo_id);
-      return [o.id.slice(0, 8), eq?.nombre || 'Desconocido', o.titulo, o.tipo, new Date(o.updated_at || o.created_at).toLocaleDateString(), o.tecnico_asignado || 'N/A'];
+      return [
+        o.id.slice(0, 8), 
+        eq?.nombre || 'General', 
+        o.titulo, 
+        o.tipo, 
+        o.estado,
+        new Date(o.created_at).toLocaleDateString()
+      ];
     });
+    
     doc.autoTable({
       startY: 40,
-      head: [['ID', 'Equipo', 'Trabajo Realizado', 'Tipo', 'Fecha', 'Técnico']],
+      head: [['ID', 'Equipo', 'Título', 'Tipo', 'Estado', 'Fecha']],
       body: tableData,
       theme: 'striped',
-      headStyles: { fillStyle: '#FF6B00', textColor: 255, fontSize: 9 },
+      headStyles: { fillColor: [255, 107, 0], textColor: 255, fontSize: 9 },
       bodyStyles: { fontSize: 8 },
       alternateRowStyles: { fillColor: [245, 245, 245] }
     });
-    doc.save(`Reporte_Bulk_Mantenimiento_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    doc.save(`Reporte_Actividad_Draftin_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleSaveOrder = async () => {
