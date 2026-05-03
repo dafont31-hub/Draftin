@@ -96,3 +96,46 @@ export const generateOrderReport = (order, equipos = []) => {
     alert("ERROR AL GENERAR PDF: " + err.message);
   }
 };
+
+export const generateBulkReport = (ordenes = [], equipos = []) => {
+  try {
+    const doc = new jsPDF();
+    if (ordenes.length === 0) {
+      alert('No hay órdenes para reportar.');
+      return;
+    }
+    
+    doc.setFontSize(20);
+    doc.text("DRAFTIN - REPORTE DE ACTIVIDAD", 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Resumen General de Mantenimiento - Generado el ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    const tableData = ordenes.map(o => {
+      const eq = equipos.find(e => e.id === o.equipo_id);
+      return [
+        o.id.slice(0, 8), 
+        eq?.nombre || 'General', 
+        o.titulo, 
+        o.tipo, 
+        o.estado,
+        new Date(o.created_at).toLocaleDateString()
+      ];
+    });
+    
+    autoTable(doc, {
+      startY: 40,
+      head: [['ID', 'Equipo', 'Título', 'Tipo', 'Estado', 'Fecha']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [255, 107, 0], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: [245, 245, 245] }
+    });
+    
+    doc.save(`Reporte_Actividad_Draftin_${new Date().toISOString().split('T')[0]}.pdf`);
+  } catch (err) {
+    console.error("Error en reporte global:", err);
+    alert("ERROR REPORTE GLOBAL: " + err.message);
+  }
+};
