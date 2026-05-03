@@ -210,7 +210,9 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                     <span className="text-[10px] font-black text-white">{days} DÍAS</span>
                   </div>
                   <h4 className="text-[11px] font-bold text-white uppercase leading-tight mb-1">{nextReg.tarea}</h4>
-                  <p className="text-[8px] text-gray-500 font-bold uppercase">{nextReg.equipos?.nombre || 'EQUIPO PRINCIPAL'}</p>
+                  <p className="text-[8px] text-gray-500 font-bold uppercase">
+                    {safeEquipos.find(e => e.id === nextReg.equipo_id)?.nombre || 'EQUIPO PRINCIPAL'}
+                  </p>
                </div>
              );
            })()}
@@ -220,7 +222,9 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                 <div key={idx} className="flex flex-col gap-1 group cursor-default">
                   <span className="text-[8px] font-black text-blue-400/80 uppercase tracking-widest leading-none group-hover:text-blue-400 transition-colors line-clamp-1">{item.tarea}</span>
                   <div className="flex justify-between items-center">
-                    <span className="text-[6px] text-white/10 font-bold uppercase group-hover:text-white/30 transition-colors">{item.equipos?.nombre || 'PLANTA'}</span>
+                    <span className="text-[6px] text-white/10 font-bold uppercase group-hover:text-white/30 transition-colors">
+                      {safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA'}
+                    </span>
                     <span className="text-[8px] font-black text-white/20 group-hover:text-white/60 transition-colors">{item.proxima_fecha ? new Date(item.proxima_fecha).toLocaleDateString() : '--'}</span>
                   </div>
                 </div>
@@ -249,43 +253,43 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Live SCADA</span>
             </div>
           </div>
-          <div className="flex-1 w-full -ml-6">
-            <ResponsiveContainer width="100%" height="100%" minHeight={150}>
-              <AreaChart data={[
-                {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-              ]}>
-                <defs>
-                  <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#FF6B00" stopOpacity={0.4}/>
-                    <stop offset="100%" stopColor="#FF6B00" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis 
-                  dataKey="h" 
-                  stroke="rgba(255,255,255,0.2)" 
-                  fontSize={8} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                />
-                <YAxis 
-                  stroke="rgba(255,255,255,0.2)" 
-                  fontSize={8} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                  domain={[0, 1500]}
-                />
-                <Tooltip 
-                  contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                  itemStyle={{color: '#FF6B00'}}
-                />
-                <Area type="monotone" dataKey="v" stroke="#FF6B00" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+            <div className="w-full h-[140px] -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[
+                  {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
+                  {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
+                ]}>
+                  <defs>
+                    <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FF6B00" stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor="#FF6B00" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis 
+                    dataKey="h" 
+                    stroke="rgba(255,255,255,0.2)" 
+                    fontSize={8} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                  />
+                  <YAxis 
+                    stroke="rgba(255,255,255,0.2)" 
+                    fontSize={8} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                    domain={[0, 1500]}
+                  />
+                  <Tooltip 
+                    contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
+                    itemStyle={{color: '#FF6B00'}}
+                  />
+                  <Area type="monotone" dataKey="v" stroke="#FF6B00" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
         </div>
 
         {/* CONSUMO AGUA */}
@@ -303,43 +307,43 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Active Link</span>
             </div>
           </div>
-          <div className="flex-1 w-full -ml-6">
-            <ResponsiveContainer width="100%" height="100%" minHeight={150}>
-              <AreaChart data={[
-                {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-              ]}>
-                <defs>
-                  <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
-                    <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis 
-                  dataKey="h" 
-                  stroke="rgba(255,255,255,0.2)" 
-                  fontSize={8} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                />
-                <YAxis 
-                  stroke="rgba(255,255,255,0.2)" 
-                  fontSize={8} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                  domain={[0, 600]}
-                />
-                <Tooltip 
-                  contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                  itemStyle={{color: 'var(--primary-color)'}}
-                />
-                <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#waterGradient)" isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+            <div className="w-full h-[140px] -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[
+                  {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
+                  {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
+                ]}>
+                  <defs>
+                    <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis 
+                    dataKey="h" 
+                    stroke="rgba(255,255,255,0.2)" 
+                    fontSize={8} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                  />
+                  <YAxis 
+                    stroke="rgba(255,255,255,0.2)" 
+                    fontSize={8} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
+                    domain={[0, 600]}
+                  />
+                  <Tooltip 
+                    contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
+                    itemStyle={{color: 'var(--primary-color)'}}
+                  />
+                  <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#waterGradient)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
         </div>
       </div>
     </div>

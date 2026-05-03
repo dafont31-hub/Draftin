@@ -74,7 +74,7 @@ export const fetchCoreData = async () => {
     const [equipos, ordenes, plan] = await Promise.all([
       supabase.from('equipos').select('*').order('nombre'),
       supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false }),
-      supabase.from('plan_mantenimiento').select('*, equipos(nombre)')
+      supabase.from('plan_mantenimiento').select('*')
     ]);
 
     return {
