@@ -16,6 +16,18 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   const safePlan = Array.isArray(planMantenimiento) ? planMantenimiento : [];
   const safeEquipos = Array.isArray(equipos) ? equipos : [];
 
+  const upcomingMaintenance = [
+    ...safePlan.filter(item => {
+      if (!item.fecha_proxima) return false;
+      const today = new Date();
+      const itemDate = new Date(item.fecha_proxima);
+      return itemDate >= today || itemDate.toLocaleDateString() === today.toLocaleDateString();
+    }).map(m => ({ ...m, isPlan: true, date: m.fecha_proxima })),
+    ...safeOrdenes.filter(o => o.tipo === 'Auditoría').map(o => ({ ...o, isOrder: true, date: o.fecha_programada || o.created_at }))
+  ]
+  .sort((a, b) => new Date(a.date) - new Date(b.date))
+  .slice(0, 8);
+
   // FILTRO INDUSTRIAL REVISADO (Mapeo de Equipos a Grupos SaaS)
   const getGrupoId = (eq) => {
     if (!eq) return 'Otros';
