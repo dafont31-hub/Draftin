@@ -124,7 +124,7 @@ const Equipos = ({ equipos = [], categories = [] }) => {
                 <img 
                   src={`/${getImage(eq.nombre)}`} 
                   className="w-full h-full object-contain mix-blend-lighten drop-shadow-xl" 
-                  style={{ filter: 'contrast(1.2) brightness(1.1)' }}
+                  style={{ filter: getFilter(eq.nombre) }}
                   alt="" 
                 />
               </div>
