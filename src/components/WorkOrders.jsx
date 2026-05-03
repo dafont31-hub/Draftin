@@ -520,7 +520,12 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             };
 
             return (
-              <div key={ord.id} onClick={() => { setSelectedOrder(ord); setView('detail'); }} className="industrial-card p-4 bg-[#0D0D0D] border-[#222] group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden rounded-xl">
+              <div key={ord.id} onClick={() => { 
+                setSelectedOrder(ord); 
+                setFotoAntes(ord.foto_antes);
+                setFotoDespues(ord.foto_despues);
+                setView('detail'); 
+              }} className="industrial-card p-4 bg-[#0D0D0D] border-[#222] group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden rounded-xl">
                 <div className="absolute top-0 left-0 w-0.5 h-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex flex-col">
