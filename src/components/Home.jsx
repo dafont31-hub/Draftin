@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { generateOrderReport } from '../services/reportService';
 import { Activity, Bell, AlertTriangle } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
@@ -241,7 +242,12 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
 
             <div className="flex flex-col gap-4 border-l border-white/5 pl-4">
               {upcomingMaintenance.map((item, idx) => (
-                <div key={idx} className="flex flex-col gap-1 group cursor-default">
+                <div 
+                  key={idx} 
+                  onClick={() => item.isOrder && generateOrderReport(item, safeEquipos)}
+                  className={`flex flex-col gap-1 group transition-all p-1.5 rounded-lg ${item.isOrder ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'}`}
+                  title={item.isOrder ? "Descargar Acta PDF" : ""}
+                >
                   <div className="flex items-center gap-2">
                     <div className={`w-1 h-1 rounded-full ${item.isOrder ? 'bg-orange-500 animate-pulse' : 'bg-blue-400'}`}></div>
                     <span className={`text-[8px] font-black uppercase tracking-widest leading-none transition-colors line-clamp-1 ${item.isOrder ? 'text-white' : 'text-blue-400/80 group-hover:text-blue-400'}`}>
@@ -251,7 +257,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                   <div className="flex justify-between items-center">
                     <span className="text-[6px] text-white/10 font-bold uppercase group-hover:text-white/30 transition-colors">
                       {item.isOrder 
-                        ? (equipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
+                        ? (safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
                         : (safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
                       }
                     </span>
@@ -260,7 +266,10 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                     </span>
                   </div>
                   {item.isOrder && (
-                    <span className="text-[6px] font-black text-orange-500/50 uppercase tracking-[0.2em]">{item.estado}</span>
+                    <div className="flex justify-between items-center mt-0.5">
+                      <span className="text-[6px] font-black text-orange-500/50 uppercase tracking-[0.2em]">{item.estado}</span>
+                      <span className="text-[5px] font-black text-primary opacity-0 group-hover:opacity-100 transition-opacity uppercase italic">Descargar PDF ›</span>
+                    </div>
                   )}
                 </div>
               ))}

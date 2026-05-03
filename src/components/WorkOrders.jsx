@@ -82,8 +82,6 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
   const handleDeleteOrder = async (id) => {
     if (!id) return;
-    alert("Iniciando borrado de la orden...");
-    console.log("Borrando orden con ID:", id);
     
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', id);
     
