@@ -74,7 +74,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     { id: '00000000-0000-0000-0000-000000000017', nombre: 'DESCALC. CAL 2', id_tecnico: 'EQ-017' }
   ];
 
-  const displayEquipos = equipos.length > 0 ? equipos : fallbackEquipos;
+  const displayEquipos = [...(equipos.length > 0 ? equipos : fallbackEquipos)].sort((a, b) => {
+    if (a.sistema !== b.sistema) return a.sistema.localeCompare(b.sistema);
+    return a.nombre.localeCompare(b.nombre, undefined, { numeric: true });
+  });
   
   // Estado para el formulario de nueva OT
   const [newOrder, setNewOrder] = useState({

@@ -7,6 +7,16 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [view, setView] = useState('login');
+  const [branding, setBranding] = useState({ empresa_nombre: 'DRAFTIN', logo_url: '/boiler_3d.png', color_primario: '#FF6B00' });
+
+  React.useEffect(() => {
+    fetchBranding();
+  }, []);
+
+  const fetchBranding = async () => {
+    const { data } = await supabase.from('app_config_branding').select('*').single();
+    if (data) setBranding(data);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -37,17 +47,30 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-6 selection:bg-neon-orange selection:text-black font-sans overflow-y-auto">
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-1000">
+    <div 
+      className="min-h-screen flex items-center justify-center p-6 selection:bg-primary selection:text-black font-sans overflow-y-auto relative"
+      style={{ 
+        backgroundImage: branding.bg_login_url ? `url(${branding.bg_login_url})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: '#0A0A0A'
+      }}
+    >
+      {/* Overlay para legibilidad si hay fondo */}
+      {branding.bg_login_url && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>}
+      
+      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-1000 relative z-10">
         
         {/* Brand Identity */}
         <div className="text-center mb-6 md:mb-10">
-          <div className="inline-block border-2 border-neon-orange/30 p-2 md:p-4 rounded-[1.5rem] md:rounded-[2rem] mb-3 md:mb-6 shadow-[0_0_60px_rgba(255,107,0,0.2)] bg-black/40 relative group">
-            <div className="absolute inset-0 bg-neon-orange/10 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <img src="/boiler_3d.png" alt="Logo" className="w-10 h-10 md:w-20 md:h-20 object-contain mix-blend-screen brightness-125 relative z-10" />
+          <div className="inline-block border-2 border-primary/30 p-2 md:p-4 rounded-[1.5rem] md:rounded-[2rem] mb-3 md:mb-6 shadow-[0_0_60px_rgba(255,107,0,0.2)] bg-black/40 relative group">
+            <div className="absolute inset-0 bg-primary/10 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <img src={branding.logo_url} alt="Logo" className="w-10 h-10 md:w-20 md:h-20 object-contain mix-blend-screen brightness-125 relative z-10" />
           </div>
-          <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter uppercase italic leading-none mb-1 drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">CALDERAS</h1>
-          <p className="text-[6px] md:text-[9px] text-neon-orange font-black uppercase tracking-[0.3em] md:tracking-[0.8em] mb-4 md:mb-8 drop-shadow-[0_0_10px_rgba(255,107,0,0.5)] opacity-80">Industrial Asset Intelligence</p>
+          <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter uppercase italic leading-none mb-1 drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">{branding.empresa_nombre}</h1>
+          <p className="text-[6px] md:text-[9px] text-primary font-black uppercase tracking-[0.3em] md:tracking-[0.8em] mb-4 md:mb-8 drop-shadow-[0_0_10px_rgba(255,107,0,0.5)] opacity-80">
+            {branding.welcome_msg || 'Industrial Asset Intelligence'}
+          </p>
         </div>
 
         <div className="bg-[#1A1A1A] border border-[#2D2D2D] rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-[0_40px_80px_rgba(0,0,0,1)] relative overflow-hidden">
@@ -83,7 +106,8 @@ const Login = () => {
               </div>
               <button 
                 type="submit" disabled={loading}
-                className="w-full bg-neon-orange hover:brightness-125 text-black font-black py-4 md:py-6 rounded-xl shadow-[0_20px_40px_rgba(255,107,0,0.3)] transform active:scale-[0.98] transition-all text-[9px] md:text-xs tracking-[0.4em] md:tracking-[0.6em] uppercase border-t-2 md:border-t-4 border-white/40 italic"
+                style={{ backgroundColor: branding.color_primario }}
+                className="w-full hover:brightness-125 text-black font-black py-4 md:py-6 rounded-xl shadow-[0_20px_40px_rgba(255,107,0,0.3)] transform active:scale-[0.98] transition-all text-[9px] md:text-xs tracking-[0.4em] md:tracking-[0.6em] uppercase border-t-2 md:border-t-4 border-white/40 italic"
               >
                 {loading ? 'AUTENTICANDO...' : 'INICIAR ACCESO MAESTRO'}
               </button>

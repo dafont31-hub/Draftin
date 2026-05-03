@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const Equipos = ({ equipos = [], categories = [] }) => {
   const [activeCategory, setActiveCategory] = useState('SALA TÉRMICA');
+  const [saveMsg, setSaveMsg] = useState(null);
 
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
@@ -55,7 +57,12 @@ const Equipos = ({ equipos = [], categories = [] }) => {
   };
 
   return (
-    <div className="animate-in fade-in duration-300 flex flex-col h-full">
+    <div className="animate-in fade-in duration-300 flex flex-col h-full relative">
+      {saveMsg && (
+        <div className="fixed top-20 right-10 bg-primary text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-right duration-300 z-50 shadow-xl">
+          {saveMsg}
+        </div>
+      )}
       {/* Pestañas de categorías dinámicas */}
       <div className="flex border-b border-[#222] mb-5 overflow-x-auto no-scrollbar px-1">
         {displayCategories.map((cat) => (
@@ -92,7 +99,17 @@ const Equipos = ({ equipos = [], categories = [] }) => {
               {/* Contenido Central */}
               <div className="flex-1 flex flex-col justify-center">
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-white text-[12px] font-black uppercase tracking-wide">{eq.nombre}</h4>
+                  <input 
+                    className="bg-transparent border-none text-white text-[12px] font-black uppercase tracking-wide focus:ring-0 p-0 w-full"
+                    defaultValue={eq.nombre}
+                    onBlur={async (e) => {
+                      const { error } = await supabase.from('equipos').update({ nombre: e.target.value }).eq('id', eq.id);
+                      if (!error) {
+                        setSaveMsg('Equipo actualizado');
+                        setTimeout(() => setSaveMsg(null), 2000);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="flex items-center gap-2">
                    <div className={`w-2 h-2 rounded-full ${statusLEDs[eq.estado] || 'bg-gray-700'} ${eq.estado !== 'Operativo' && eq.estado !== 'Operativa' ? 'animate-pulse' : ''}`}></div>
@@ -104,7 +121,17 @@ const Equipos = ({ equipos = [], categories = [] }) => {
 
               {/* ID y Flecha Derecha */}
               <div className="flex flex-col items-end justify-between h-14 pl-4 border-l border-[#222]">
-                <span className="text-[8px] font-black text-gray-500 bg-[#0A0A0A] px-1.5 py-0.5 rounded border border-[#222] tracking-widest">{eq.id_tecnico}</span>
+                <input 
+                  className="bg-[#0A0A0A] border border-[#222] text-[8px] font-black text-gray-500 px-1.5 py-0.5 rounded tracking-widest uppercase text-right w-20 outline-none focus:border-primary/50"
+                  defaultValue={eq.id_tecnico}
+                  onBlur={async (e) => {
+                    const { error } = await supabase.from('equipos').update({ id_tecnico: e.target.value }).eq('id', eq.id);
+                    if (!error) {
+                      setSaveMsg('ID Técnico actualizado');
+                      setTimeout(() => setSaveMsg(null), 2000);
+                    }
+                  }}
+                />
                 <svg className="w-4 h-4 text-gray-500 group-hover:text-[#FF6B00] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

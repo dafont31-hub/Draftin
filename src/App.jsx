@@ -96,7 +96,7 @@ function App() {
       if (errP) console.error("Error cargando plan:", errP);
 
       if (e) setEquipos(e)
-      if (o) setOrdenes(o)
+      if (o) setOrdenes([]) // Se fuerza a vacío por solicitud del usuario para empezar de cero
       if (p) setPlanMantenimiento(p)
     } catch (e) {
       console.error("Error crítico en fetchData:", e);
@@ -115,7 +115,7 @@ function App() {
       case 'analiticas': return <Analiticas />;
       case 'equipos': return <Equipos equipos={equipos} categories={appConfigGrupos} />;
       case 'usuarios': return <GestionUsuarios />;
-      case 'configuracion': case 'config': return <Configuracion />;
+      case 'configuracion': case 'config': return <Configuracion setActiveTab={setActiveTab} />;
       case 'ai_chat': case 'ai': case 'cerebro': return <AIChat />;
       case 'documentacion': case 'docs': return <BibliotecaDocs />;
       default: return <Home setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
@@ -123,6 +123,7 @@ function App() {
   }
 
   const visibleNavItems = navItems.filter(item => {
+    if (['configuracion', 'config'].includes(item.tab_id.toLowerCase())) return false;
     if (!item.roles || !userRole) return true;
     const itemRoles = Array.isArray(item.roles) ? item.roles.map(r => r.toLowerCase()) : [];
     return itemRoles.includes(userRole);
@@ -163,7 +164,12 @@ function App() {
                 <div className="w-2 h-2 bg-[#00FF88] rounded-full shadow-[0_0_12px_#00FF88] animate-pulse"></div>
                 <span className="text-[9px] font-black uppercase text-gray-500 tracking-[0.3em]">SaaS_Core_Active</span>
              </div>
-             <div className="w-12 h-12 bg-[#0A0A0A] border border-white/10 rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary cursor-pointer transition-all hover:border-primary/50 group"><Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" /></div>
+             <div 
+               onClick={() => setActiveTab('configuracion')}
+               className="w-12 h-12 bg-[#0A0A0A] border border-white/10 rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary cursor-pointer transition-all hover:border-primary/50 group"
+             >
+               <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
+             </div>
           </div>
         </header>
 

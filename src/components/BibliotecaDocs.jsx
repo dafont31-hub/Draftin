@@ -30,13 +30,11 @@ const BibliotecaDocs = () => {
       setLoading(true);
       setErrorMsg(null);
       
-      console.log("DEBUG: Intentando leer de Base de Datos...");
-      const { data, error } = await supabase.from('manuales').select('*');
+      const { data, error } = await supabase.from('manuales').select('*').order('created_at', { ascending: false });
       
-      if (!error && data && data.length > 0) {
-        setDocumentos(data);
+      if (!error && data) {
+        setDocumentos(data.length > 0 ? data : DOCUMENTOS_RESPALDO);
       } else {
-        console.warn("DEBUG: Usando datos de respaldo por error de caché en Supabase.");
         setDocumentos(DOCUMENTOS_RESPALDO);
       }
     } catch (err) {
@@ -45,6 +43,47 @@ const BibliotecaDocs = () => {
       setLoading(false);
     }
   }
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      // 1. Subir a Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('manuales')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Insertar en Tabla
+      const { error: insertError } = await supabase
+        .from('manuales')
+        .insert([{
+          titulo: file.name.replace(`.${fileExt}`, ''),
+          filename: file.name,
+          categoria: 'Manual Técnico',
+          url: filePath
+        }]);
+
+      if (insertError) throw insertError;
+
+      alert('Documento subido con éxito');
+      fetchDocumentos();
+    } catch (error) {
+      console.error('Error:', error);
+      setErrorMsg('Error al subir el archivo. Asegúrate de que el bucket "manuales" existe en Supabase.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categorias = ['Todos', ...new Set(documentos.map(doc => doc.categoria))];
 
@@ -101,12 +140,29 @@ const BibliotecaDocs = () => {
 
         {/* Filtros y Sincronización */}
         <div className="flex flex-wrap items-center gap-3">
+          <input 
+            type="file" 
+            id="doc-upload" 
+            className="hidden" 
+            onChange={handleUpload}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg"
+          />
+          <label 
+            htmlFor="doc-upload"
+            className="px-5 py-3 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(var(--primary-color-rgb),0.3)] flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+            </svg>
+            Subir Documento
+          </label>
+
           <div className="flex bg-[#111] p-1 rounded-xl border border-[#222]">
             {categorias.map(cat => (
               <button
                 key={cat}
                 onClick={() => setFiltro(cat)}
-                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${filtro === cat ? 'bg-primary text-black shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.3)]' : 'text-gray-500 hover:text-gray-200'}`}
+                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${filtro === cat ? 'bg-white/10 text-white border border-white/10' : 'text-gray-500 hover:text-gray-200'}`}
               >
                 {cat}
               </button>

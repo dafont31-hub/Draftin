@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import GestionUsuarios from './GestionUsuarios';
+import BibliotecaDocs from './BibliotecaDocs';
 
-const Configuracion = () => {
+const Configuracion = ({ setActiveTab }) => {
   const [activeSubTab, setActiveSubTab] = useState('pestanas');
+  const [saveStatus, setSaveStatus] = useState(null);
   const [pestanas, setPestanas] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  const [equipos, setEquipos] = useState([]);
   const [branding, setBranding] = useState({ empresa_nombre: '', color_primario: '#FF6B00' });
   const [aiConfig, setAiConfig] = useState({ provider: 'google', api_key: '', model: 'gemini-1.5-flash', activo: true });
+  const [uiConfig, setUiConfig] = useState({ borderRadius: '1.5rem', glassOpacity: '0.1', cardBg: '#111' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -17,15 +22,22 @@ const Configuracion = () => {
     setLoading(true);
     const { data: pData } = await supabase.from('app_config_pestanas').select('*').order('orden', { ascending: true });
     const { data: gData } = await supabase.from('app_config_grupos').select('*').order('orden', { ascending: true });
+    const { data: eData } = await supabase.from('equipos').select('*').order('nombre', { ascending: true });
     const { data: bData } = await supabase.from('app_config_branding').select('*').single();
     const { data: aiData } = await supabase.from('app_config_ai').select('*').single();
     
     if (pData) setPestanas(pData);
     if (gData) setGrupos(gData);
+    if (eData) setEquipos(eData);
     if (bData) setBranding(bData);
     if (aiData) setAiConfig(aiData);
     setLoading(false);
   }
+
+  const notifySave = () => {
+    setSaveStatus('¡Cambios guardados con éxito!');
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
 
   const IconPreview = ({ name }) => {
     switch (name) {
@@ -43,7 +55,10 @@ const Configuracion = () => {
 
   const handleUpdatePestana = async (id, field, value) => {
     const { error } = await supabase.from('app_config_pestanas').update({ [field]: value }).eq('id', id);
-    if (!error) fetchConfig();
+    if (!error) {
+      fetchConfig();
+      notifySave();
+    }
   };
 
   const handleAddPestana = async () => {
@@ -85,6 +100,7 @@ const Configuracion = () => {
           document.documentElement.style.setProperty('--primary-color-rgb', `${r}, ${g}, ${b}`);
         }
         await fetchConfig();
+        notifySave();
       }
     } catch (err) {
       alert("Error crítico: " + err.message);
@@ -99,7 +115,7 @@ const Configuracion = () => {
       { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin'] },
       { label: 'TAREAS', icon: 'tool', tab_id: 'ordenes', orden: 2, roles: ['admin', 'operario'] },
       { label: 'DATOS', icon: 'edit', tab_id: 'recogida', orden: 3, roles: ['admin', 'operario'] },
-      { label: 'CONFIG', icon: 'configuracion', label: 'CONFIG', roles: ['admin'], tab_id: 'configuracion', orden: 8 }
+      { label: 'CONFIG', icon: 'configuracion', roles: ['admin'], tab_id: 'configuracion', orden: 8 }
     ];
     
     for (const tab of defaultTabs) {
@@ -127,10 +143,42 @@ const Configuracion = () => {
   };
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div className="animate-in fade-in duration-300 relative">
+      {/* NOTIFICACIÓN DE GUARDADO */}
+      {saveStatus && (
+        <div className="fixed top-24 right-10 z-[300] bg-[#00FF88] text-black px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_30px_rgba(0,255,136,0.4)] flex items-center gap-3 animate-bounce">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+          {saveStatus}
+        </div>
+      )}
+      {/* HEADER DE CONFIGURACIÓN */}
+      <div className="flex items-center justify-between mb-8 bg-[#050505] p-6 rounded-3xl border border-white/5 shadow-2xl">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30">
+            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-[14px] font-black text-white tracking-widest uppercase">PANEL DE CONTROL SaaS</h2>
+            <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-1">Configuración Maestra del Sistema DRAFTIN</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setActiveTab('inicio')}
+          className="flex items-center gap-3 px-6 py-3 bg-[#111] border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all text-gray-400 hover:text-white group"
+        >
+          <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Volver al Dashboard
+        </button>
+      </div>
+
       <div className="mb-6">
-        <h2 className="text-[11px] font-black text-white tracking-widest mb-3 uppercase">CONFIGURACIÓN DEL SISTEMA (MODO SaaS)</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => setActiveSubTab('marketplace')}
             className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'marketplace' ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.3)]' : 'bg-[#111] border-[#222] text-gray-500'}`}
@@ -144,18 +192,6 @@ const Configuracion = () => {
             MENÚ Y ESTRUCTURA
           </button>
           <button 
-            onClick={() => setActiveSubTab('documentos')}
-            className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'documentos' ? 'bg-primary border-primary text-white' : 'bg-[#111] border-[#222] text-gray-500'}`}
-          >
-            BIBLIOTECA DE DOCS
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('conectores')}
-            className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'conectores' ? 'bg-primary border-primary text-white' : 'bg-[#111] border-[#222] text-gray-500'}`}
-          >
-            CONECTORES DE CAMPO (SCADA)
-          </button>
-          <button 
             onClick={() => setActiveSubTab('branding')}
             className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'branding' ? 'bg-primary border-primary text-white' : 'bg-[#111] border-[#222] text-gray-500'}`}
           >
@@ -166,6 +202,12 @@ const Configuracion = () => {
             className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'ai' ? 'bg-purple-600 border-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'bg-[#111] border-[#222] text-gray-500'}`}
           >
             CEREBRO AI 🤖
+          </button>
+          <button 
+            onClick={() => setActiveSubTab('ui')}
+            className={`px-4 py-2 text-[9px] font-bold rounded-lg border transition-all ${activeSubTab === 'ui' ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.3)]' : 'bg-[#111] border-[#222] text-gray-500'}`}
+          >
+            DISEÑO GLOBAL 🎨
           </button>
           <button 
             onClick={() => setActiveSubTab('servidor')}
@@ -574,47 +616,120 @@ const Configuracion = () => {
                 <p className="text-[7px] text-gray-600 mt-2 uppercase">Este color afectará a botones, indicadores y estados operativos.</p>
               </div>
 
-              <div className="industrial-card p-6 bg-[#111] border-[#222] opacity-50">
+              <div className="industrial-card p-6 bg-[#111] border-[#222]">
                 <label className="text-[8px] text-gray-500 font-bold uppercase mb-2 block">Logo de la Aplicación (URL)</label>
                 <input 
                   type="text" 
+                  value={branding.logo_url || ''}
+                  onChange={(e) => setBranding({...branding, logo_url: e.target.value})}
+                  onBlur={(e) => handleUpdateBranding('logo_url', e.target.value)}
+                  placeholder="https://tu-servidor.com/logo.png"
+                  className="w-full bg-[#0A0A0A] border border-[#222] text-white text-[12px] p-3 rounded focus:border-primary outline-none"
+                />
+              </div>
+              <div className="industrial-card p-6 bg-[#111] border-[#222]">
+                <label className="text-[8px] text-gray-500 font-bold uppercase mb-2 block">Mensaje de Bienvenida (Login)</label>
+                <input 
+                  type="text" 
+                  value={branding.welcome_msg || ''}
+                  onChange={(e) => setBranding({...branding, welcome_msg: e.target.value})}
+                  onBlur={(e) => handleUpdateBranding('welcome_msg', e.target.value)}
+                  placeholder="Industrial Asset Intelligence"
+                  className="w-full bg-[#0A0A0A] border border-[#222] text-white text-[12px] p-3 rounded focus:border-primary outline-none"
+                />
+              </div>
+              <div className="industrial-card p-6 bg-[#111] border-[#222]">
+                <label className="text-[8px] text-gray-500 font-bold uppercase mb-2 block">Fondo del Login (URL)</label>
+                <input 
+                  type="text" 
+                  value={branding.bg_login_url || ''}
+                  onChange={(e) => setBranding({...branding, bg_login_url: e.target.value})}
+                  onBlur={(e) => handleUpdateBranding('bg_login_url', e.target.value)}
                   placeholder="https://..."
                   className="w-full bg-[#0A0A0A] border border-[#222] text-white text-[12px] p-3 rounded focus:border-primary outline-none"
-                  disabled
                 />
-                <p className="text-[7px] text-gray-600 mt-2 uppercase">Carga de archivos habilitada en versión Pro.</p>
               </div>
             </div>
           </div>
         )}
 
-        {activeSubTab === 'servidor' && (
-          <div className="max-w-md mx-auto py-8">
-            <h3 className="text-[12px] font-bold text-white uppercase tracking-wider mb-6 text-center">Configuración de Independencia</h3>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-[8px] text-gray-500 font-bold uppercase mb-2 block">URL de Supabase (Endpoint)</label>
-                <input 
-                  type="text" 
-                  placeholder="https://xxxx.supabase.co"
-                  className="w-full bg-[#111] border border-[#222] text-white text-[11px] p-3 rounded focus:border-[#FF6B00] outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-[8px] text-gray-500 font-bold uppercase mb-2 block">API KEY (Service Role / Anon)</label>
-                <input 
-                  type="password" 
-                  placeholder="eyJhbG..."
-                  className="w-full bg-[#111] border border-[#222] text-white text-[11px] p-3 rounded focus:border-[#FF6B00] outline-none"
-                />
-              </div>
-              <button className="bg-gray-800 text-white text-[10px] font-black p-3 rounded mt-4 opacity-50 cursor-not-allowed">
-                PROBAR CONEXIÓN (MÓDULO EN DESARROLLO)
-              </button>
-              <p className="text-[7px] text-gray-600 italic text-center mt-2">
-                * Esto permitirá que la app sea 100% independiente de cualquier servidor fijo.
-              </p>
-            </div>
+        {activeSubTab === 'ui' && (
+          <div className="max-w-2xl mx-auto py-8">
+             <div className="flex items-center gap-4 mb-10 border-b border-[#222] pb-8">
+                <div className="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center border border-blue-500/30 shadow-2xl">
+                   <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+                <div>
+                   <h3 className="text-[18px] font-black text-white uppercase tracking-tighter leading-none italic">Motor de Diseño y Experiencia UI</h3>
+                   <p className="text-[9px] text-gray-500 uppercase mt-2 tracking-widest leading-relaxed">Personaliza cada detalle visual para que la app se sienta tuya</p>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="industrial-card p-6 bg-[#111] border-[#222] hover:border-primary/20 transition-all">
+                   <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Curvatura (Border Radius)</label>
+                   <input 
+                      type="range" min="0" max="50" 
+                      value={parseInt(uiConfig.borderRadius) || 20}
+                      onChange={(e) => {
+                         const val = `${e.target.value}px`;
+                         setUiConfig({...uiConfig, borderRadius: val});
+                         document.documentElement.style.setProperty('--border-radius', val);
+                      }}
+                      className="w-full accent-primary" 
+                   />
+                   <div className="flex justify-between mt-2 text-[8px] text-gray-700 font-bold uppercase">
+                      <span>Industrial (Recto)</span>
+                      <span>Moderno (Curvo)</span>
+                   </div>
+                </div>
+
+                <div className="industrial-card p-6 bg-[#111] border-[#222] hover:border-primary/20 transition-all">
+                   <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Transparencia (Glassmorphism)</label>
+                   <input 
+                      type="range" min="0" max="50" 
+                      value={parseFloat(uiConfig.glassOpacity) * 100}
+                      onChange={(e) => {
+                         const val = (e.target.value / 100).toString();
+                         setUiConfig({...uiConfig, glassOpacity: val});
+                         document.documentElement.style.setProperty('--glass-opacity', val);
+                      }}
+                      className="w-full accent-primary" 
+                   />
+                   <div className="flex justify-between mt-2 text-[8px] text-gray-700 font-bold uppercase">
+                      <span>Sólido</span>
+                      <span>Cristal</span>
+                   </div>
+                </div>
+
+                <div className="industrial-card p-6 bg-[#111] border-[#222] md:col-span-2">
+                   <div className="flex items-center justify-between mb-4">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Color de Fondo de Tarjetas</label>
+                      <input 
+                        type="color" 
+                        value={uiConfig.cardBg}
+                        onChange={(e) => {
+                           setUiConfig({...uiConfig, cardBg: e.target.value});
+                           document.documentElement.style.setProperty('--card-bg', e.target.value);
+                        }}
+                        className="w-8 h-8 bg-transparent border-none cursor-pointer"
+                      />
+                   </div>
+                   <input 
+                      type="text" 
+                      value={uiConfig.cardBg}
+                      onChange={(e) => setUiConfig({...uiConfig, cardBg: e.target.value})}
+                      className="w-full bg-[#0A0A0A] border border-[#222] text-white text-[11px] p-3 rounded-xl outline-none focus:border-primary font-mono"
+                   />
+                </div>
+             </div>
+
+             <button 
+               onClick={() => notifySave()}
+               className="w-full py-5 bg-white text-black text-[11px] font-black rounded-2xl mt-10 hover:bg-primary transition-all uppercase tracking-[0.3em] shadow-2xl italic"
+             >
+               Guardar Preferencias de Diseño
+             </button>
           </div>
         )}
       </div>
