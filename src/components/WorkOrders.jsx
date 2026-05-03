@@ -510,7 +510,11 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {ordenes.length > 0 ? (
-          ordenes.filter(o => o.tipo !== 'Auditoría').map(ord => {
+          ordenes.filter(o => 
+            o.tipo !== 'Auditoría' && 
+            o.tipo !== 'Inspección' && 
+            !(o.titulo || '').toLowerCase().includes('inspección')
+          ).map(ord => {
             const eq = equipos.find(e => e.id === ord.equipo_id);
             const priorityColors = {
               'Baja': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
