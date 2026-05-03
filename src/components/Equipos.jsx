@@ -24,7 +24,7 @@ const Equipos = ({ equipos = [], categories = [] }) => {
     if (n.includes('CALDERA')) return 'boiler_3d.png';
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('INTERCAMBIADOR')) return 'heat_exchanger_3d.png';
-    if (n.includes('DESCALC')) return 'softener_3d.png';
+    if (n.includes('DESCALC') || n.includes('DUPLEX')) return 'softener_3d.png';
     if (n.includes('DESGASIFICADOR')) return 'degasser_3d.png';
     if (n.includes('ARCO')) return 'softener_3d.png'; 
     if (n.includes('SATÉLITE')) return 'softener_3d.png'; 
