@@ -126,8 +126,16 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
   // VISTA: NUEVA ORDEN
   if (view === 'new') {
-    const equipoSeleccionado = equipos.find(e => e.id === newOrder.equipo_id);
-    const esSatelite = equipoSeleccionado?.nombre.toUpperCase().includes('SATELITE');
+    const equipoSeleccionado = equipos.find(e => String(e.id) === String(newOrder.equipo_id));
+    // Detección más flexible (con o sin tildes)
+    const esSatelite = equipoSeleccionado?.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().includes('SATELITE');
+
+    const priorityStyles = {
+      'Baja': 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]',
+      'Media': 'bg-primary border-primary text-black shadow-[0_0_15px_rgba(255,107,0,0.3)]',
+      'Alta': 'bg-orange-600 border-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.3)]',
+      'Crítica': 'bg-red-600 border-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] animate-pulse'
+    };
 
     return (
       <div className="flex flex-col h-full bg-[#0A0A0A] animate-in slide-in-from-right-4 duration-300">
@@ -154,23 +162,27 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
               </select>
             </div>
 
+            {/* CAMPO DINÁMICO PARA SATÉLITES - MEJORADO */}
             {esSatelite && (
-              <div className="flex flex-col gap-2 animate-in zoom-in-95 duration-300">
-                <label className="text-[9px] font-black text-[#FF6B00] uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-1 h-3 bg-[#FF6B00]"></div> Identificador de Satélite / Unidad
+              <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-[#FF6B00]"></div> IDENTIFICADOR DE SATÉLITE
                 </label>
-                <input 
-                  type="text" 
-                  list="sub-equipos-list"
-                  placeholder="Escriba o seleccione el número de satélite..."
-                  value={newOrder.sub_equipo} 
-                  onChange={(e) => setNewOrder({...newOrder, sub_equipo: e.target.value})} 
-                  className="w-full bg-[#1A1A1A] border-2 border-[#FF6B00]/30 rounded-xl py-4 px-4 text-[14px] font-black text-white outline-none focus:border-[#FF6B00] placeholder:text-gray-700" 
-                />
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    list="sub-equipos-list"
+                    placeholder="Escriba nº de satélite..."
+                    value={newOrder.sub_equipo} 
+                    onChange={(e) => setNewOrder({...newOrder, sub_equipo: e.target.value})} 
+                    className="w-full bg-[#1A1A1A] border-2 border-[#FF6B00]/50 rounded-2xl py-5 px-5 text-[16px] font-black text-white outline-none focus:border-[#FF6B00] placeholder:text-gray-800 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]" 
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-[#FF6B00]/40 tracking-widest">UNIDAD</div>
+                </div>
                 <datalist id="sub-equipos-list">
                   {getSubEquiposSugeridos().map(sub => <option key={sub} value={sub} />)}
                 </datalist>
-                <p className="text-[7px] text-gray-600 font-bold uppercase">Sugerencias basadas en el historial</p>
+                <p className="text-[8px] text-gray-600 font-bold uppercase tracking-tight ml-2 italic">Registro persistente: se guardará automáticamente en el historial.</p>
               </div>
             )}
 
@@ -188,6 +200,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             </div>
           </div>
 
+          {/* PRIORIDAD - COLORES DINÁMICOS */}
           <div className="space-y-3">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Prioridad del Trabajo</label>
             <div className="grid grid-cols-4 gap-2">
@@ -195,10 +208,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
                 <button
                   key={p}
                   onClick={() => setNewOrder({...newOrder, prioridad: p})}
-                  className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter border transition-all ${
+                  className={`py-4 rounded-xl text-[9px] font-black uppercase tracking-tighter border transition-all duration-300 ${
                     newOrder.prioridad === p 
-                    ? (p === 'Crítica' ? 'bg-red-500 border-red-500 text-white' : 'bg-primary border-primary text-black')
-                    : 'bg-[#141414] border-[#222] text-gray-500 hover:border-gray-700'
+                    ? priorityStyles[p]
+                    : 'bg-[#141414] border-[#222] text-gray-600 hover:border-gray-500 hover:text-gray-400'
                   }`}
                 >
                   {p}
