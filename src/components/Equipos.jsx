@@ -78,6 +78,11 @@ const Equipos = ({ equipos = [], categories = [] }) => {
     return matchGeneric ? matchGeneric.nombre : displayCategories[0].nombre;
   };
 
+  const getFilter = (nombre) => {
+    if (nombre.toUpperCase().includes('RACK')) return 'contrast(1.2) brightness(1.1) hue-rotate(160deg) saturate(1.5)';
+    return 'contrast(1.2) brightness(1.1)';
+  };
+
   const filteredEquipos = equipos
     .filter(eq => getGrupo(eq) === activeCategory)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
