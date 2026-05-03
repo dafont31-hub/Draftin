@@ -199,14 +199,16 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
   const handleDeleteOrder = async (id) => {
     if (!id) return;
-    if (!window.confirm('¿ELIMINAR ESTA ORDEN PERMANENTEMENTE?')) return;
+    alert("Iniciando borrado de la orden...");
+    console.log("Borrando orden con ID:", id);
     
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', id);
     
     if (error) {
       console.error("Error de borrado:", error);
-      alert(`No se pudo borrar: ${error.message}`);
+      alert(`Error de base de datos: ${error.message}`);
     } else {
+      console.log("Orden borrada con éxito");
       await refreshData();
       setView('list');
       setSelectedOrder(null);
