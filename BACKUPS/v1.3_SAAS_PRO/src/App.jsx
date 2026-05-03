@@ -10,7 +10,6 @@ import Equipos from './components/Equipos'
 import GestionUsuarios from './components/GestionUsuarios'
 import Configuracion from './components/Configuracion'
 import AIChat from './components/AIChat'
-import BibliotecaDocs from './components/BibliotecaDocs'
 import { fetchCoreData } from './services/dataService'
 import { Activity, Layout, Settings, Database, Cpu, FileText, BarChart2, Shield, MessageSquare, AlertTriangle, Droplet, LogOut } from 'lucide-react'
 
