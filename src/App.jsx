@@ -151,7 +151,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'inicio': case 'dashboard': return <Home setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} groups={appConfigGrupos} refreshData={fetchData} />;
-      case 'ordenes': case 'tareas': return <WorkOrders setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} refreshData={fetchData} />;
+      case 'ordenes': case 'tareas': return <WorkOrders setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
       case 'recogida': case 'datos': return <RecogidaDatos refreshData={fetchData} />;
       case 'consumo': case 'consumos': return <Consumos />;
       case 'analiticas': return <Analiticas />;

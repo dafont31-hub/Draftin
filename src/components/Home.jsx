@@ -25,9 +25,11 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
       return itemDate >= today || itemDate.toLocaleDateString() === today.toLocaleDateString();
     }).map(m => ({ ...m, isPlan: true, date: m.fecha_proxima })),
     ...safeOrdenes.filter(o => 
-      o.tipo === 'Auditoría' || 
-      o.tipo === 'Inspección' || 
-      (o.titulo || '').toLowerCase().includes('inspección')
+      o.estado !== 'Finalizada' && (
+        o.tipo === 'Auditoría' || 
+        o.tipo === 'Inspección' || 
+        (o.titulo || '').toLowerCase().includes('inspección')
+      )
     ).map(o => ({ ...o, isOrder: true, date: o.fecha_programada || o.created_at }))
   ]
   .sort((a, b) => new Date(a.date) - new Date(b.date))

@@ -2,10 +2,11 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Trash2, Edit3, ChevronLeft, Save, Camera, Calendar, Plus, RefreshCw, Clock } from 'lucide-react';
 import { generateOrderReport, generateBulkReport } from '../services/reportService';
-import { Trash2, Edit3, ChevronLeft, Save, Camera } from 'lucide-react';
 
-const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
+const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refreshData }) => {
+  const [mainTab, setMainTab] = useState('ots'); // 'ots', 'planning'
   const [view, setView] = useState('list'); // 'list', 'new', 'detail'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTabDetail, setActiveTabDetail] = useState('Detalles');
@@ -13,6 +14,12 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   const [fotoDespues, setFotoDespues] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editOrder, setEditOrder] = useState(null);
+  const [newPlan, setNewPlan] = useState({ 
+    equipo_id: equipos[0]?.id || '', 
+    tarea: '', 
+    frecuencia_meses: 12, 
+    fecha_proxima: new Date().toISOString().split('T')[0] 
+  });
 
   const fileInputAntes = useRef(null);
   const fileInputDespues = useRef(null);
@@ -108,6 +115,37 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
       sub_equipo: editOrder.sub_equipo
     }).eq('id', editOrder.id);
     if (!error) { refreshData(); setIsEditing(false); setSelectedOrder(editOrder); }
+  };
+
+  const handleSavePlan = async () => {
+    if (!newPlan.tarea || !newPlan.equipo_id) return alert('Tarea y Equipo son obligatorios');
+    const { error } = await supabase.from('plan_mantenimiento').insert([newPlan]);
+    if (error) alert('Error al guardar el plan');
+    else {
+      refreshData();
+      setNewPlan({ ...newPlan, tarea: '' });
+    }
+  };
+
+  const handleDeletePlan = async (id) => {
+    if (!window.confirm('¿ELIMINAR ESTE PLAN PERMANENTEMENTE?')) return;
+    const { error } = await supabase.from('plan_mantenimiento').delete().eq('id', id);
+    if (!error) refreshData();
+  };
+
+  const handleCompletePlanTask = async (plan) => {
+    const nextDate = new Date(plan.fecha_proxima);
+    nextDate.setMonth(nextDate.getMonth() + (Number(plan.frecuencia_meses) || 12));
+    
+    const { error } = await supabase.from('plan_mantenimiento').update({ 
+      fecha_proxima: nextDate.toISOString().split('T')[0] 
+    }).eq('id', plan.id);
+    
+    if (error) alert('Error al actualizar fecha');
+    else {
+      alert("¡Inspección completada! Fecha actualizada para el próximo ciclo.");
+      refreshData();
+    }
   };
 
   const handleCapture = (e, setFoto) => {
@@ -411,78 +449,210 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   return (
     <div className="animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-[14px] font-black uppercase tracking-[0.3em] text-white">Mantenimiento</h2>
-          <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Órdenes de Trabajo (OT)</p>
+        <div className="flex flex-col gap-4 w-full md:w-auto">
+          <div>
+            <h2 className="text-[14px] font-black uppercase tracking-[0.3em] text-white italic">Mantenimiento Industrial</h2>
+            <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Control de Activos y Planificación</p>
+          </div>
+          
+          {/* SELECTOR DE PESTAÑA PRINCIPAL */}
+          <div className="flex bg-[#111] p-1 rounded-xl border border-white/5 w-full md:w-64">
+            <button onClick={() => setMainTab('ots')} className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mainTab === 'ots' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-600 hover:text-gray-400'}`}>Órdenes (OT)</button>
+            <button onClick={() => setMainTab('planning')} className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mainTab === 'planning' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-600 hover:text-gray-400'}`}>Planificación</button>
+          </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={generateBulkPDF} className="flex-1 md:flex-none px-4 py-2 bg-white/5 border border-white/10 text-primary text-[9px] font-black uppercase rounded-lg">Reporte Global</button>
-          <button onClick={() => setView('new')} className="flex-1 md:flex-none px-4 py-2 bg-primary text-black text-[9px] font-black uppercase rounded-lg shadow-lg shadow-primary/20">Nueva OT</button>
+
+        <div className="flex gap-2 w-full md:w-auto items-center">
+          <button onClick={generateBulkPDF} className="flex-1 md:flex-none px-4 py-2 bg-white/5 border border-white/10 text-primary text-[9px] font-black uppercase rounded-lg hover:bg-primary/10 transition-all flex items-center justify-center gap-2">
+            <Save size={14} /> Reporte Global
+          </button>
+          <button onClick={() => setView('new')} className="flex-1 md:flex-none px-4 py-2 bg-primary text-black text-[9px] font-black uppercase rounded-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <Plus size={14} /> Nueva OT
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {ordenes.length > 0 ? (
-          ordenes.filter(o => 
-            o.tipo !== 'Auditoría' && 
-            o.tipo !== 'Inspección' && 
-            !(o.titulo || '').toLowerCase().includes('inspección')
-          ).map(ord => {
-            const eq = equipos.find(e => e.id === ord.equipo_id);
-            const priorityColors = {
-              'Baja': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-              'Media': 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-              'Alta': 'text-orange-500 bg-orange-500/10 border-orange-500/20',
-              'Crítica': 'text-red-500 bg-red-500/20 border-red-500/30 animate-pulse'
-            };
+      {mainTab === 'ots' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {ordenes.length > 0 ? (
+            ordenes.filter(o => 
+              o.tipo !== 'Auditoría' && 
+              o.tipo !== 'Inspección' && 
+              !(o.titulo || '').toLowerCase().includes('inspección')
+            ).map(ord => {
+              const eq = equipos.find(e => e.id === ord.equipo_id);
+              const priorityColors = {
+                'Baja': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+                'Media': 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+                'Alta': 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+                'Crítica': 'text-red-500 bg-red-500/20 border-red-500/30 animate-pulse'
+              };
 
-            return (
-              <div key={ord.id} onClick={() => { 
-                setSelectedOrder(ord); 
-                setFotoAntes(ord.foto_antes);
-                setFotoDespues(ord.foto_despues);
-                setView('detail'); 
-              }} className="industrial-card p-4 bg-[#0D0D0D] border-[#222] group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden rounded-xl">
-                <div className="absolute top-0 left-0 w-0.5 h-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-gray-600 tracking-widest uppercase">#{ord.id.slice(0,8)}</span>
-                    <div className="flex items-center gap-1">
-                      <h3 className="text-white text-[12px] font-black uppercase tracking-tight mt-0.5">{eq?.nombre || 'Equipo'}</h3>
-                      {ord.sub_equipo && <span className="text-primary text-[7px] font-black mt-0.5">({ord.sub_equipo})</span>}
+              return (
+                <div key={ord.id} onClick={() => { 
+                  setSelectedOrder(ord); 
+                  setFotoAntes(ord.foto_antes);
+                  setFotoDespues(ord.foto_despues);
+                  setView('detail'); 
+                }} className="industrial-card p-4 bg-[#0D0D0D] border-[#222] group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 w-0.5 h-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col">
+                      <span className="text-[7px] font-black text-gray-600 tracking-widest uppercase">#{ord.id.slice(0,8)}</span>
+                      <div className="flex items-center gap-1">
+                        <h3 className="text-white text-[12px] font-black uppercase tracking-tight mt-0.5">{eq?.nombre || 'Equipo'}</h3>
+                        {ord.sub_equipo && <span className="text-primary text-[7px] font-black mt-0.5">({ord.sub_equipo})</span>}
+                      </div>
+                    </div>
+                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded border uppercase ${priorityColors[ord.prioridad] || 'text-gray-400 bg-gray-500/10'}`}>
+                      {ord.prioridad}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-[10px] font-medium line-clamp-1 leading-relaxed">{ord.titulo}</p>
+                  <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{new Date(ord.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1 h-1 rounded-full ${ord.estado === 'Finalizada' ? 'bg-green-500' : 'bg-primary'}`}></div>
+                      <span className="text-[8px] text-white font-black uppercase tracking-widest">{ord.estado}</span>
                     </div>
                   </div>
-                  <span className={`text-[7px] font-black px-1.5 py-0.5 rounded border uppercase ${priorityColors[ord.prioridad] || 'text-gray-400 bg-gray-500/10'}`}>
-                    {ord.prioridad}
-                  </span>
+                  
+                  {/* Botón de borrado rápido */}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.id); }}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-red-500 hover:text-white"
+                    title="Eliminar OT"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
-                <p className="text-gray-400 text-[10px] font-medium line-clamp-1 leading-relaxed">{ord.titulo}</p>
-                <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
-                  <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{new Date(ord.created_at).toLocaleDateString()}</span>
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-1 h-1 rounded-full ${ord.estado === 'Finalizada' ? 'bg-green-500' : 'bg-primary'}`}></div>
-                    <span className="text-[8px] text-white font-black uppercase tracking-widest">{ord.estado}</span>
-                  </div>
-                </div>
-                
-                {/* Botón de borrado rápido */}
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.id); }}
-                  className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-red-500 hover:text-white"
-                  title="Eliminar OT"
+              );
+            })
+          ) : (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl opacity-20">
+               <Clock size={24} className="text-gray-400 mb-2" />
+               <p className="text-[8px] font-black uppercase tracking-[0.3em]">Sin órdenes activas</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* VISTA DE PLANIFICACIÓN RECURRENTE */
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Formulario de Nuevo Plan */}
+          <div className="lg:col-span-1 space-y-4 bg-[#0A0A0A] p-5 rounded-2xl border border-white/5 h-fit sticky top-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+              <Plus size={14} /> Programar Inspección
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Equipo Principal</label>
+                <select 
+                  value={newPlan.equipo_id} 
+                  onChange={(e) => setNewPlan({...newPlan, equipo_id: e.target.value})}
+                  className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary appearance-none"
                 >
-                  <Trash2 size={12} />
-                </button>
+                  {equipos.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                </select>
               </div>
-            );
-          })
-        ) : (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl opacity-20">
-             <Camera size={24} className="text-gray-400 mb-2" />
-             <p className="text-[8px] font-black uppercase tracking-[0.3em]">Sin órdenes activas</p>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Título de Inspección</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: Inspección Nivel B..."
+                  value={newPlan.tarea} 
+                  onChange={(e) => setNewPlan({...newPlan, tarea: e.target.value})}
+                  className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Cada (Meses)</label>
+                  <input 
+                    type="number" 
+                    value={newPlan.frecuencia_meses} 
+                    onChange={(e) => setNewPlan({...newPlan, frecuencia_meses: e.target.value})}
+                    className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Próxima Fecha</label>
+                  <input 
+                    type="date" 
+                    value={newPlan.fecha_proxima} 
+                    onChange={(e) => setNewPlan({...newPlan, fecha_proxima: e.target.value})}
+                    className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleSavePlan}
+                className="w-full py-3 bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase rounded-xl hover:bg-primary hover:text-black hover:border-primary transition-all mt-4"
+              >
+                Guardar en Planificación
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Listado de Planes Activos */}
+          <div className="lg:col-span-3 space-y-3">
+            {planMantenimiento.length > 0 ? (
+              planMantenimiento.map(plan => {
+                const eq = equipos.find(e => e.id === plan.equipo_id);
+                return (
+                  <div key={plan.id} className="bg-[#0D0D0D] border border-white/5 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-primary/20 transition-all group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-gray-500 group-hover:text-primary transition-colors">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-[12px] font-black text-white uppercase tracking-tight">{plan.tarea}</h4>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">{eq?.nombre || 'EQUIPO'}</span>
+                          <span className="text-[8px] text-primary font-black uppercase tracking-[0.2em] flex items-center gap-1">
+                            <RefreshCw size={8} /> Cada {plan.frecuencia_meses} meses
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+                      <div className="flex flex-col text-left md:text-right">
+                        <span className="text-[7px] text-gray-600 font-black uppercase tracking-widest italic">Siguiente Vencimiento</span>
+                        <span className="text-[11px] text-white font-black uppercase tracking-widest mt-0.5">{new Date(plan.fecha_proxima).toLocaleDateString()}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleCompletePlanTask(plan)}
+                          className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary text-[8px] font-black uppercase rounded-lg hover:bg-primary hover:text-black transition-all flex items-center gap-2"
+                          title="Completar y Programar Siguiente"
+                        >
+                          <RefreshCw size={12} /> Completar Ciclo
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePlan(plan.id)}
+                          className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl opacity-20">
+                <Calendar size={24} className="text-gray-400 mb-2" />
+                <p className="text-[8px] font-black uppercase tracking-[0.3em]">No hay planes de mantenimiento definidos</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
