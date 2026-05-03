@@ -250,7 +250,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
           <div className="flex-1 w-full -ml-6">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={150}>
               <AreaChart data={[
                 {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
                 {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
@@ -304,7 +304,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
           <div className="flex-1 w-full -ml-6">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={150}>
               <AreaChart data={[
                 {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
                 {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
