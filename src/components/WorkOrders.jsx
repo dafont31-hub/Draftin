@@ -133,15 +133,15 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
 
     const priorityStyles = {
       'Baja': 'bg-blue-600/10 border-blue-600/20 text-blue-400',
-      'Media': 'bg-primary/10 border-primary/20 text-primary',
-      'Alta': 'bg-orange-600/10 border-orange-600/20 text-orange-400',
+      'Media': 'bg-amber-500/10 border-amber-500/20 text-amber-500',
+      'Alta': 'bg-orange-600/10 border-orange-600/20 text-orange-500',
       'Crítica': 'bg-red-600/10 border-red-600/20 text-red-400'
     };
 
     const activePriorityStyles = {
       'Baja': 'bg-blue-600 border-blue-600 text-white',
-      'Media': 'bg-primary border-primary text-black',
-      'Alta': 'bg-orange-600 border-orange-600 text-white',
+      'Media': 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-900/20',
+      'Alta': 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-900/20',
       'Crítica': 'bg-red-600 border-red-600 text-white animate-pulse'
     };
 
@@ -301,7 +301,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     const equipo = equipos.find(e => e.id === selectedOrder.equipo_id);
     const priorityColors = {
       'Baja': 'text-blue-400',
-      'Media': 'text-primary',
+      'Media': 'text-amber-500',
       'Alta': 'text-orange-500',
       'Crítica': 'text-red-500 animate-pulse'
     };
@@ -433,7 +433,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             const eq = equipos.find(e => e.id === ord.equipo_id);
             const priorityColors = {
               'Baja': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-              'Media': 'text-primary bg-primary/10 border-primary/20',
+              'Media': 'text-amber-500 bg-amber-500/10 border-amber-500/20',
               'Alta': 'text-orange-500 bg-orange-500/10 border-orange-500/20',
               'Crítica': 'text-red-500 bg-red-500/20 border-red-500/30 animate-pulse'
             };
