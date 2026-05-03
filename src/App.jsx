@@ -25,9 +25,21 @@ function App() {
   const [ordenes, setOrdenes] = useState([])
   const [planMantenimiento, setPlanMantenimiento] = useState([])
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [appConfigGrupos, setAppConfigGrupos] = useState([])
   const [branding, setBranding] = useState({ empresa_nombre: 'DRAFTIN INDUSTRIAL', color_primario: '#FF6B00', logo_url: null })
   const [uiConfig, setUiConfig] = useState({ border_radius: '1.5rem', glass_opacity: '0.1', card_bg: '#111' })
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -200,8 +212,10 @@ function App() {
           </div>
           <div className="flex items-center gap-6">
              <div className="hidden md:flex items-center gap-3 bg-white/[0.03] px-5 py-2 rounded-full border border-white/5 shadow-inner">
-                <div className="w-2 h-2 bg-[#00FF88] rounded-full shadow-[0_0_12px_#00FF88] animate-pulse"></div>
-                <span className="text-[9px] font-black uppercase text-gray-500 tracking-[0.3em]">SaaS_Core_Active</span>
+                <div className={`w-2 h-2 rounded-full shadow-lg ${isOnline ? 'bg-[#00FF88] shadow-[#00FF88]/40 animate-pulse' : 'bg-red-500 shadow-red-500/40 animate-[pulse_0.5s_infinite]'}`}></div>
+                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isOnline ? 'text-gray-500' : 'text-red-500'}`}>
+                  {isOnline ? 'DATABASE_ONLINE' : 'OFFLINE_MODE'}
+                </span>
              </div>
              <div className="flex items-center gap-2">
                 <div 
