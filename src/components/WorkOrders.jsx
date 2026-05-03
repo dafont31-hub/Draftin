@@ -12,9 +12,28 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   const [fotoDespues, setFotoDespues] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editOrder, setEditOrder] = useState(null);
+  const [saveMsg, setSaveMsg] = useState(null);
 
   const fileInputAntes = useRef(null);
   const fileInputDespues = useRef(null);
+
+  const [newOrder, setNewOrder] = useState({ 
+    equipo_id: equipos[0]?.id || '', 
+    titulo: '', 
+    descripcion: '', 
+    prioridad: 'Media', 
+    tipo: 'Correctivo', 
+    tecnico_asignado: '',
+    sub_equipo: '',
+    fecha_programada: new Date().toISOString().split('T')[0]
+  });
+
+  const getSubEquiposSugeridos = () => {
+    const subs = ordenes
+      .filter(o => o.equipo_id === newOrder.equipo_id && o.sub_equipo)
+      .map(o => o.sub_equipo);
+    return [...new Set(subs)];
+  };
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -51,12 +70,25 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     else {
       refreshData();
       setView('list');
-      setNewOrder({ equipo_id: equipos[0]?.id || '', titulo: '', descripcion: '', prioridad: 'Normal', tipo: 'Correctivo', tecnico_asignado: '' });
+      setNewOrder({ 
+        equipo_id: equipos[0]?.id || '', 
+        titulo: '', 
+        descripcion: '', 
+        prioridad: 'Media', 
+        tipo: 'Correctivo', 
+        tecnico_asignado: '',
+        sub_equipo: '',
+        fecha_programada: new Date().toISOString().split('T')[0]
+      });
     }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
-    const { error } = await supabase.from('ordenes_trabajo').update({ estado: newStatus, foto_antes: fotoAntes, foto_despues: fotoDespues }).eq('id', id);
+    const { error } = await supabase.from('ordenes_trabajo').update({ 
+      estado: newStatus, 
+      foto_antes: fotoAntes, 
+      foto_despues: fotoDespues 
+    }).eq('id', id);
     if (!error) {
       refreshData();
       setView('list');
@@ -77,7 +109,8 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
       descripcion: editOrder.descripcion,
       prioridad: editOrder.prioridad,
       tipo: editOrder.tipo,
-      tecnico_asignado: editOrder.tecnico_asignado
+      tecnico_asignado: editOrder.tecnico_asignado,
+      sub_equipo: editOrder.sub_equipo
     }).eq('id', editOrder.id);
     if (!error) { refreshData(); setIsEditing(false); setSelectedOrder(editOrder); }
   };
@@ -91,7 +124,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     }
   };
 
-  const [newOrder, setNewOrder] = useState({ 
+  // VISTA: NUEVA ORDEN
   if (view === 'new') {
     const equipoSeleccionado = equipos.find(e => e.id === newOrder.equipo_id);
     const esSatelite = equipoSeleccionado?.nombre.toUpperCase().includes('SATELITE');
@@ -238,6 +271,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     );
   }
 
+  // VISTA: DETALLE DE ORDEN
   if (view === 'detail' && selectedOrder) {
     const equipo = equipos.find(e => e.id === selectedOrder.equipo_id);
     const priorityColors = {
@@ -287,7 +321,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
                     Prioridad {selectedOrder.prioridad}
                   </div>
                 </div>
-                <h3 className="text-white text-[18px] font-black uppercase tracking-tight">{equipo?.nombre || 'Equipo'}</h3>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-white text-[18px] font-black uppercase tracking-tight">{equipo?.nombre || 'Equipo'}</h3>
+                  {selectedOrder.sub_equipo && <span className="text-primary text-[10px] font-black uppercase">Unidad: {selectedOrder.sub_equipo}</span>}
+                </div>
                 <p className="text-gray-400 text-[12px] font-medium mt-1 leading-relaxed">{selectedOrder.titulo}</p>
                 
                 <div className="mt-8 grid grid-cols-2 gap-6 border-t border-white/5 pt-6">
@@ -387,6 +424,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     );
   }
 
+  // VISTA: LISTADO GENERAL
   return (
     <div className="animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -422,7 +460,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black text-gray-600 tracking-widest uppercase">OT #{ord.id.slice(0,8)}</span>
-                    <h3 className="text-white text-[14px] font-black uppercase tracking-tight mt-1">{eq?.nombre || 'Equipo'}</h3>
+                    <div className="flex items-center gap-1">
+                      <h3 className="text-white text-[14px] font-black uppercase tracking-tight mt-1">{eq?.nombre || 'Equipo'}</h3>
+                      {ord.sub_equipo && <span className="text-primary text-[8px] font-black mt-1">({ord.sub_equipo})</span>}
+                    </div>
                   </div>
                   <span className={`text-[8px] font-black px-2.5 py-1 rounded-md border uppercase ${priorityColors[ord.prioridad] || 'text-gray-400 bg-gray-500/10'}`}>
                     {ord.prioridad}
