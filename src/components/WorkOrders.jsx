@@ -198,9 +198,21 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   };
 
   const handleDeleteOrder = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta orden?')) return;
+    if (!id) return;
+    if (!window.confirm('¿ELIMINAR ESTA ORDEN PERMANENTEMENTE?')) return;
+    
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', id);
-    if (!error) { refreshData(); setView('list'); }
+    
+    if (error) {
+      console.error("Error de borrado:", error);
+      alert(`No se pudo borrar: ${error.message}`);
+    } else {
+      await refreshData();
+      setView('list');
+      setSelectedOrder(null);
+      setFotoAntes(null);
+      setFotoDespues(null);
+    }
   };
 
   const handleUpdateOrder = async () => {
