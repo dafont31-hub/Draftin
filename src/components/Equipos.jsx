@@ -24,7 +24,7 @@ const Equipos = ({ equipos = [], categories = [] }) => {
     const n = nombre.toUpperCase();
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('CALDERA')) return 'boiler_3d.png';
-    if (n.includes('RACK')) return 'heat_exchanger_3d.png';
+    if (n.includes('RACK')) return 'degasser_3d_old.png'; 
     if (n.includes('COLECTOR')) return 'collector_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
     if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
