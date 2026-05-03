@@ -254,7 +254,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
             <div className="w-full h-[140px] -ml-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" debounce={100}>
                 <AreaChart data={[
                   {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
                   {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
@@ -308,7 +308,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
             </div>
           </div>
             <div className="w-full h-[140px] -ml-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" debounce={100}>
                 <AreaChart data={[
                   {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
                   {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
