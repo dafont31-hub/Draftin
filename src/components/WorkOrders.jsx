@@ -92,16 +92,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
   };
 
   const [newOrder, setNewOrder] = useState({ 
-    equipo_id: equipos[0]?.id || '', 
-    titulo: '', 
-    descripcion: '', 
-    prioridad: 'Media', 
-    tipo: 'Correctivo', 
-    tecnico_asignado: '',
-    fecha_programada: new Date().toISOString().split('T')[0]
-  });
-
   if (view === 'new') {
+    const equipoSeleccionado = equipos.find(e => e.id === newOrder.equipo_id);
+    const esSatelite = equipoSeleccionado?.nombre.toUpperCase().includes('SATELITE');
+
     return (
       <div className="flex flex-col h-full bg-[#0A0A0A] animate-in slide-in-from-right-4 duration-300">
         <div className="flex items-center gap-3 mb-6 p-4 border-b border-white/5">
@@ -113,11 +107,10 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-8 pb-32 no-scrollbar px-4">
-          {/* SECTOR EQUIPO */}
           <div className="space-y-4">
             <div className="flex flex-col gap-2">
               <label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-primary"></div> Selección de Equipo
+                <div className="w-1 h-3 bg-primary"></div> Equipo Principal
               </label>
               <select 
                 value={newOrder.equipo_id} 
@@ -127,6 +120,26 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
                 {equipos.map(eq => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}
               </select>
             </div>
+
+            {esSatelite && (
+              <div className="flex flex-col gap-2 animate-in zoom-in-95 duration-300">
+                <label className="text-[9px] font-black text-[#FF6B00] uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-1 h-3 bg-[#FF6B00]"></div> Identificador de Satélite / Unidad
+                </label>
+                <input 
+                  type="text" 
+                  list="sub-equipos-list"
+                  placeholder="Escriba o seleccione el número de satélite..."
+                  value={newOrder.sub_equipo} 
+                  onChange={(e) => setNewOrder({...newOrder, sub_equipo: e.target.value})} 
+                  className="w-full bg-[#1A1A1A] border-2 border-[#FF6B00]/30 rounded-xl py-4 px-4 text-[14px] font-black text-white outline-none focus:border-[#FF6B00] placeholder:text-gray-700" 
+                />
+                <datalist id="sub-equipos-list">
+                  {getSubEquiposSugeridos().map(sub => <option key={sub} value={sub} />)}
+                </datalist>
+                <p className="text-[7px] text-gray-600 font-bold uppercase">Sugerencias basadas en el historial</p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
@@ -142,7 +155,6 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             </div>
           </div>
 
-          {/* PRIORIDAD - BOTONES GRANDES */}
           <div className="space-y-3">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Prioridad del Trabajo</label>
             <div className="grid grid-cols-4 gap-2">
@@ -162,7 +174,6 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             </div>
           </div>
 
-          {/* TIPO DE TRABAJO */}
           <div className="space-y-3">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Tipo de Intervención</label>
             <div className="grid grid-cols-2 gap-2">
@@ -182,7 +193,6 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
             </div>
           </div>
 
-          {/* TÉCNICO Y FECHA */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Técnico Asignado</label>
@@ -197,6 +207,8 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
               <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Fecha Inicio</label>
               <input 
                 type="date" 
+                value={newOrder.fecha_programada}
+                onChange={(e) => setNewOrder({...newOrder, fecha_programada: e.target.value})}
                 className="w-full bg-[#141414] border border-[#222] rounded-xl py-4 px-4 text-[12px] font-bold text-white outline-none focus:border-primary [color-scheme:dark]" 
               />
             </div>
