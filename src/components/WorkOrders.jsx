@@ -35,7 +35,87 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
     return [...new Set(subs)];
   };
 
-  const generatePDF = () => {
+  const generateSingleOrderPDF = (order) => {
+    const doc = new jsPDF();
+    const eq = equipos.find(e => e.id === order.equipo_id);
+    
+    // Header Industrial
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 107, 0);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("DRAFTIN", 15, 25);
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.text("INSPECCIÓN TÉCNICA Y MANTENIMIENTO", 15, 32);
+    
+    // Datos OT
+    doc.setTextColor(0);
+    doc.setFontSize(12);
+    doc.text(`ORDEN DE TRABAJO: #${order.id.slice(0, 8)}`, 15, 55);
+    
+    const info = [
+      ["Equipo", eq?.nombre || 'General'],
+      ["Unidad/Satélite", order.sub_equipo || 'N/A'],
+      ["Tipo", order.tipo],
+      ["Prioridad", order.prioridad],
+      ["Técnico", order.tecnico_asignado || 'Sin asignar'],
+      ["Fecha", new Date(order.created_at).toLocaleDateString()]
+    ];
+    
+    doc.autoTable({
+      startY: 60,
+      body: info,
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+    });
+    
+    // Descripción
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("OBSERVACIONES TÉCNICAS:", 15, finalY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const splitText = doc.splitTextToSize(order.descripcion || 'Sin observaciones detalladas.', 180);
+    doc.text(splitText, 15, finalY + 7);
+    
+    // Evidencia Fotográfica
+    const photoY = finalY + 25;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("EVIDENCIA FOTOGRÁFICA", 15, photoY);
+    
+    // Renderizado de fotos (Antes y Después)
+    const imgWidth = 85;
+    const imgHeight = 65;
+    
+    if (order.foto_antes || fotoAntes) {
+      try {
+        doc.addImage(order.foto_antes || fotoAntes, 'JPEG', 15, photoY + 5, imgWidth, imgHeight);
+        doc.setFontSize(8);
+        doc.text("ESTADO INICIAL (ANTES)", 15, photoY + imgHeight + 10);
+      } catch (e) { console.error("Error PDF Foto Antes", e); }
+    }
+    
+    if (order.foto_despues || fotoDespues) {
+      try {
+        doc.addImage(order.foto_despues || fotoDespues, 'JPEG', 110, photoY + 5, imgWidth, imgHeight);
+        doc.setFontSize(8);
+        doc.text("ESTADO FINAL (DESPUÉS)", 110, photoY + imgHeight + 10);
+      } catch (e) { console.error("Error PDF Foto Después", e); }
+    }
+    
+    // Pie de página
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text("Este documento certifica la intervención técnica realizada en planta.", 105, 285, { align: "center" });
+    
+    doc.save(`OT_${order.id.slice(0, 8)}_${eq?.nombre || 'Intervencion'}.pdf`);
+  };
+
+  const generateBulkPDF = () => {
     const doc = new jsPDF();
     const completedOrders = ordenes.filter(o => o.estado === 'Finalizada');
     if (completedOrders.length === 0) {
@@ -60,7 +140,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
       bodyStyles: { fontSize: 8 },
       alternateRowStyles: { fillColor: [245, 245, 245] }
     });
-    doc.save(`Reporte_Mantenimiento_Draftin_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Reporte_Bulk_Mantenimiento_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleSaveOrder = async () => {
@@ -318,7 +398,8 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
           </div>
           {!isEditing && (
             <div className="flex gap-2">
-              <button onClick={() => { setEditOrder(selectedOrder); setIsEditing(true); }} className="p-2 bg-white/5 border border-white/10 rounded-lg text-primary"><Edit3 size={16} /></button>
+              <button onClick={() => generateSingleOrderPDF(selectedOrder)} className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-primary text-[8px] font-black uppercase tracking-widest">Acta PDF</button>
+              <button onClick={() => { setEditOrder(selectedOrder); setIsEditing(true); }} className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400"><Edit3 size={16} /></button>
               <button onClick={() => handleDeleteOrder(selectedOrder.id)} className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500"><Trash2 size={16} /></button>
             </div>
           )}
@@ -422,7 +503,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
           <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Órdenes de Trabajo (OT)</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={generatePDF} className="flex-1 md:flex-none px-4 py-2 bg-white/5 border border-white/10 text-primary text-[9px] font-black uppercase rounded-lg">Reporte</button>
+          <button onClick={generateBulkPDF} className="flex-1 md:flex-none px-4 py-2 bg-white/5 border border-white/10 text-primary text-[9px] font-black uppercase rounded-lg">Reporte Global</button>
           <button onClick={() => setView('new')} className="flex-1 md:flex-none px-4 py-2 bg-primary text-black text-[9px] font-black uppercase rounded-lg shadow-lg shadow-primary/20">Nueva OT</button>
         </div>
       </div>
