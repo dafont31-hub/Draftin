@@ -138,7 +138,7 @@ function App() {
       const coreData = await fetchCoreData();
       
       setEquipos(coreData.equipos);
-      setOrdenes([]); // Mantener la política de empezar de cero en OTs si así se desea
+      setOrdenes(coreData.ordenes || []);
       setPlanMantenimiento(coreData.planMantenimiento);
     } catch (e) {
       console.error("Error crítico en fetchData:", e);
