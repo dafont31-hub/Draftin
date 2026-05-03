@@ -569,6 +569,15 @@ const WorkOrders = ({ equipos = [], ordenes = [], refreshData }) => {
                     <span className="text-[8px] text-white font-black uppercase tracking-widest">{ord.estado}</span>
                   </div>
                 </div>
+                
+                {/* Botón de borrado rápido */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.id); }}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-red-500 hover:text-white"
+                  title="Eliminar OT"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             );
           })
