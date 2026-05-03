@@ -65,7 +65,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
     const n = nombre.toUpperCase();
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('CALDERA')) return 'boiler_3d.png';
-    if (n.includes('RACK')) return 'degasser_3d_old.png'; 
+    if (n.includes('RACK')) return 'heat_exchanger_3d.png';
     if (n.includes('COLECTOR')) return 'collector_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
     if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
@@ -162,7 +162,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                         src={`/${getImage(eq.nombre)}`} 
                         className="w-full h-full object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700"
                         style={{ 
-                          filter: 'brightness(1.5) contrast(1.3)',
+                          filter: `brightness(1.5) contrast(1.3) ${(eq.nombre || '').toUpperCase().includes('RACK') ? 'grayscale(1) contrast(1.5)' : ''}`,
                           maskImage: 'radial-gradient(circle, black 40%, transparent 90%)',
                           WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 90%)'
                         }} 

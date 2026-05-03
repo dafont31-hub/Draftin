@@ -11,19 +11,21 @@ const Equipos = ({ equipos = [], categories = [] }) => {
     }
   }, [categories, activeCategory]);
 
-  const displayCategories = categories.length > 0 
+  const displayCategories = (categories && categories.length > 0) 
     ? categories 
     : [
-        { nombre: 'SALA TÉRMICA', grupo_id: 'SALA TÉRMICA' }, 
-        { nombre: 'LIMPIEZA', grupo_id: 'LIMPIEZA' }, 
-        { nombre: 'ARCO DE DESINFECCIÓN', grupo_id: 'ARCO DE DESINFECCIÓN' }
+        { nombre: 'CALDERAS', grupo_id: 'Calderas' }, 
+        { nombre: 'DESCALCIFICADORES', grupo_id: 'Descalcificadores' }, 
+        { nombre: 'DESGASIFICADOR', grupo_id: 'Desgasificador' },
+        { nombre: 'GRUPO TÉRMICO', grupo_id: 'Grupo Térmico' }
       ];
 
   const getImage = (nombre) => {
     const n = nombre.toUpperCase();
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('CALDERA')) return 'boiler_3d.png';
-    if (n.includes('COLECTOR') || n.includes('RACK')) return 'collector_3d.png';
+    if (n.includes('RACK')) return 'heat_exchanger_3d.png';
+    if (n.includes('COLECTOR')) return 'collector_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
     if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
     if (n.includes('DESCALC') || n.includes('DUPLEX')) return 'softener_3d.png';
@@ -75,11 +77,12 @@ const Equipos = ({ equipos = [], categories = [] }) => {
       return (s === gId || s === gName || n.includes(gName) || n.includes(gId));
     });
     
-    return matchGeneric ? matchGeneric.nombre : displayCategories[0].nombre;
+    return matchGeneric ? matchGeneric.nombre : (displayCategories[0]?.nombre || 'General');
   };
 
   const getFilter = (nombre) => {
-    if (nombre.toUpperCase().includes('RACK')) return 'contrast(1.2) brightness(1.1) hue-rotate(160deg) saturate(1.5)';
+    const n = (nombre || '').toUpperCase();
+    if (n.includes('RACK')) return 'grayscale(1) contrast(1.2) brightness(1.3)';
     return 'contrast(1.2) brightness(1.1)';
   };
 
