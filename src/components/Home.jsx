@@ -4,7 +4,7 @@ import { generateOrderReport } from '../services/reportService';
 import { Activity, Bell, AlertTriangle } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
-const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
+const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [chartReady, setChartReady] = useState(false);
 
@@ -19,11 +19,11 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
 
   const upcomingMaintenance = [
     ...safePlan.filter(item => {
-      if (!item.fecha_proxima) return false;
+      if (!item.proxima_fecha) return false;
       const today = new Date();
-      const itemDate = new Date(item.fecha_proxima);
+      const itemDate = new Date(item.proxima_fecha);
       return itemDate >= today || itemDate.toLocaleDateString() === today.toLocaleDateString();
-    }).map(m => ({ ...m, isPlan: true, date: m.fecha_proxima })),
+    }).map(m => ({ ...m, isPlan: true, date: m.proxima_fecha })),
     ...safeOrdenes.filter(o => 
       o.estado !== 'Finalizada' && (
         o.tipo === 'Auditoría' || 
@@ -110,12 +110,12 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
   return (
     <div className="animate-in fade-in duration-500 pb-10 relative">
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Órdenes Abiertas', val: 0, color: 'text-white' },
-          { label: 'En Proceso', val: 0, color: 'text-primary' },
-          { label: 'Urgentes', val: 0, color: 'text-red-500' },
-          { label: 'Finalizadas', val: 0, color: 'text-[#00FF88]' }
+          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: 0, color: 'text-white' },
+          { label: t('en_progreso') || 'En Proceso', val: 0, color: 'text-primary' },
+          { label: t('urgentes') || 'Urgentes', val: 0, color: 'text-red-500' },
+          { label: t('completado') || 'Finalizadas', val: 0, color: 'text-[#00FF88]' }
         ].map((s, i) => (
           <div key={i} className="flex flex-col gap-0.5 border-l border-white/5 pl-3">
              <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em]">{s.label}</span>
@@ -129,12 +129,12 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
           <div className="flex items-center justify-between h-10 mb-6">
             <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] flex items-center gap-3 italic">
                 <div className="w-1.5 h-3 bg-primary shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.5)]"></div>
-                Estado de los Sectores
+                {t('estado_sectores') || 'Estado de los Sectores'}
             </h3>
             <div className="flex gap-2">
               {selectedGroup && (
                 <button onClick={() => setSelectedGroup(null)} className="text-[8px] font-black text-primary border border-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-widest">
-                  ‹ Volver
+                  ‹ {t('volver')}
                 </button>
               )}
             </div>
@@ -213,7 +213,7 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
            <div className="flex items-center h-10">
               <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] flex items-center gap-3">
                   <div className="w-1.5 h-3 bg-blue-500 shadow-[0_0_15px_#3B82F6]"></div>
-                  REVISIONES E INSPECCIONES
+                  {t('revisiones_inspecciones') || 'REVISIONES E INSPECCIONES'}
                </h3>
            </div>
            
@@ -283,16 +283,16 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-white/5">
         {/* CONSUMO GAS */}
         <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 flex flex-col h-[220px] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#FF6B00]/40 to-transparent"></div>
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/40 to-transparent"></div>
           <div className="flex justify-between items-start mb-6">
             <div className="space-y-1">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">TELEMETRÍA: CONSUMO GAS</span>
+              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">{t('telemetria_consumo_gas')}</span>
               <div className="text-3xl font-black text-white tracking-tighter flex items-baseline gap-2">
                 0 <span className="text-[12px] text-white/30 font-medium uppercase">m³/h</span>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-               <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse shadow-[0_0_10px_#FF6B00]"></div>
+               <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)] animate-pulse shadow-[0_0_10px_var(--primary-color)]"></div>
                <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Live SCADA</span>
             </div>
           </div>
@@ -305,8 +305,8 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                   ]}>
                     <defs>
                       <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#FF6B00" stopOpacity={0.4}/>
-                        <stop offset="100%" stopColor="#FF6B00" stopOpacity={0}/>
+                        <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
+                        <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
@@ -328,9 +328,9 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
                     />
                     <Tooltip 
                       contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                      itemStyle={{color: '#FF6B00'}}
+                      itemStyle={{color: 'var(--primary-color)'}}
                     />
-                    <Area type="monotone" dataKey="v" stroke="#FF6B00" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -342,13 +342,13 @@ const Home = ({ setActiveTab, equipos = [], ordenes = [], planMantenimiento = []
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
           <div className="flex justify-between items-start mb-6">
             <div className="space-y-1">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">TELEMETRÍA: CONSUMO AGUA</span>
+              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">{t('telemetria_consumo_agua')}</span>
               <div className="text-3xl font-black text-primary tracking-tighter flex items-baseline gap-2">
                 0 <span className="text-[12px] text-primary/40 font-medium uppercase">m³/h</span>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_#FF6B00]"></div>
+               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary-color)]"></div>
                <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Active Link</span>
             </div>
           </div>

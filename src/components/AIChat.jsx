@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import knowledgeBase from '../knowledge_base.json';
 
 const AIChat = () => {
   const [messages, setMessages] = useState([
@@ -46,11 +47,27 @@ const AIChat = () => {
         parts: [{ text: m.content }]
       }));
 
-      // 3. Preparar el historial completo con instrucciones
-      const systemContext = "Eres un Asistente Técnico experto de DRAFTIN. Responde de forma profesional sobre mantenimiento industrial y calderas.";
+      // 3. Preparar el historial completo con instrucciones y conocimiento
+      const docsContext = knowledgeBase.map(doc => `DOCUMENTO: ${doc.filename}\nCONTENIDO: ${doc.content}`).join('\n\n');
+      
+      const systemContext = `Eres el Asistente Técnico experto de DRAFTIN. 
+Tus respuestas DEBEN basarse prioritariamente en la siguiente DOCUMENTACIÓN TÉCNICA de la empresa:
+
+${docsContext}
+
+REGLAS DE IDENTIFICACIÓN CRÍTICAS:
+- La Caldera 1 (Caldera de vapor nº 1) se identifica por su número de fabricación que termina en 29 (ej: 10529).
+- La Caldera 2 (Caldera de vapor nº 2) se identifica por su número de fabricación que termina en 30 (ej: 10530).
+
+INSTRUCCIONES:
+1. Responde de forma profesional, concisa y técnica.
+2. Si el usuario pregunta algo que está en los documentos, cita el nombre del documento.
+3. Si la información no está en los documentos, responde usando tu conocimiento general pero indica que no se ha encontrado en los manuales oficiales.
+4. Usa un tono de soporte técnico industrial.`;
+
       const historyForAPI = [
-        { role: 'user', parts: [{ text: `CONTEXTO DE EMPRESA: ${systemContext}` }] },
-        { role: 'model', parts: [{ text: "Entendido. Estoy listo para asistir a los operarios de DRAFTIN con soporte técnico profesional." }] },
+        { role: 'user', parts: [{ text: `SISTEMA DE CONOCIMIENTO:\n${systemContext}` }] },
+        { role: 'model', parts: [{ text: "He cargado la biblioteca técnica de DRAFTIN. Estoy listo para responder consultas basadas en los manuales de calderas, inspecciones y fichas técnicas proporcionadas." }] },
         ...history
       ];
 

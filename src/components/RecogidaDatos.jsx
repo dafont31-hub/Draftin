@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { processChecklistData } from '../services/dataService';
 import { History, ClipboardList, Trash2, Calendar } from 'lucide-react';
 
-const RecogidaDatos = ({ refreshData }) => {
+const RecogidaDatos = ({ t, refreshData }) => {
   const [activeTab, setActiveTab] = useState('nuevo'); // 'nuevo' o 'historial'
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -78,12 +78,12 @@ const RecogidaDatos = ({ refreshData }) => {
       <input 
         type={type} step="any" value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-[#111] border border-[#222] text-white text-[15px] p-3.5 rounded-xl focus:border-[#FF6B00] outline-none transition-all placeholder:text-gray-800"
+        className="w-full bg-[#111] border border-[#222] text-white text-[15px] p-3.5 rounded-xl focus:border-primary outline-none transition-all placeholder:text-gray-800"
       />
     </div>
   );
 
-  const Header = ({ title, color = "text-[#FF6B00]" }) => (
+  const Header = ({ title, color = "text-primary" }) => (
     <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md py-4 mb-6 border-b border-[#222]">
       <h3 className={`text-[12px] font-black uppercase tracking-[0.2em] ${color}`}>{title}</h3>
     </div>
@@ -126,10 +126,10 @@ const RecogidaDatos = ({ refreshData }) => {
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-[18px] font-black text-white tracking-widest uppercase italic">Centro de Datos</h2>
         <div className="flex bg-[#111] rounded-xl p-1 border border-white/5">
-           <button onClick={() => setActiveTab('nuevo')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'nuevo' ? 'bg-[#FF6B00] text-black' : 'text-gray-500 hover:text-white'}`}>
+           <button onClick={() => setActiveTab('nuevo')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'nuevo' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
              <ClipboardList size={14} /> NUEVO
            </button>
-           <button onClick={() => setActiveTab('historial')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'historial' ? 'bg-[#FF6B00] text-black' : 'text-gray-500 hover:text-white'}`}>
+           <button onClick={() => setActiveTab('historial')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'historial' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
              <History size={14} /> HISTORIAL
            </button>
         </div>
@@ -212,12 +212,12 @@ const RecogidaDatos = ({ refreshData }) => {
            <div className="mt-10">
               <label className="text-[9px] font-black text-gray-500 uppercase block mb-2">Observaciones</label>
               <textarea 
-                className="w-full bg-[#111] border border-[#222] text-white p-4 rounded-xl min-h-[100px] outline-none focus:border-[#FF6B00]"
+                className="w-full bg-[#111] border border-[#222] text-white p-4 rounded-xl min-h-[100px] outline-none focus:border-primary"
                 onChange={(e) => handleSimpleUpdate('observaciones', '', e.target.value)}
               ></textarea>
            </div>
 
-           <button type="submit" disabled={loading} className="w-full p-5 rounded-2xl bg-[#FF6B00] text-black text-[15px] font-black uppercase tracking-[0.4em] shadow-2xl mt-12 mb-20 active:scale-95 transition-all">
+           <button type="submit" disabled={loading} className="w-full p-5 rounded-2xl bg-primary text-black text-[15px] font-black uppercase tracking-[0.4em] shadow-2xl mt-12 mb-20 active:scale-95 transition-all">
              {loading ? 'GUARDANDO...' : 'GUARDAR REVISIÓN COMPLETA'}
            </button>
         </form>

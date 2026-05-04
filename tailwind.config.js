@@ -16,6 +16,9 @@ export default {
       },
       boxShadow: {
         'inner-glow': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+      },
+      screens: {
+        'xs': '400px',
       }
     },
   },

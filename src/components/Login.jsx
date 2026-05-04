@@ -79,7 +79,12 @@ const Login = () => {
                  onError={(e) => e.target.src = "/boiler_3d.png"}
                />
             </div>
-            <h1 className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">{branding.empresa_nombre}</h1>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-black uppercase tracking-[0.2em] italic text-white flex flex-col items-center">
+                <span className="text-primary drop-shadow-[0_0_15px_rgba(255,107,0,0.5)]">DRAFTIN</span>
+                <span className="text-[10px] tracking-[0.5em] text-gray-500 not-italic font-light border-t border-white/10 pt-1 mt-1">THERMAL MASTER</span>
+              </h1>
+            </div>
             <p className="text-[5px] font-black text-primary uppercase tracking-[0.5em] mt-1 opacity-60 italic">Core_Access_v4</p>
           </div>
 

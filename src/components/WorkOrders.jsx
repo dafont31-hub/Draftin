@@ -14,22 +14,22 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
   const [fotoDespues, setFotoDespues] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editOrder, setEditOrder] = useState(null);
-  const [newPlan, setNewPlan] = useState({ 
-    equipo_id: equipos[0]?.id || '', 
-    tarea: '', 
-    frecuencia_meses: 12, 
-    fecha_proxima: new Date().toISOString().split('T')[0] 
+  const [newPlan, setNewPlan] = useState({
+    equipo_id: equipos[0]?.id || '',
+    tarea: '',
+    frecuencia_meses: 12,
+    proxima_fecha: new Date().toISOString().split('T')[0]
   });
 
   const fileInputAntes = useRef(null);
   const fileInputDespues = useRef(null);
 
-  const [newOrder, setNewOrder] = useState({ 
-    equipo_id: equipos[0]?.id || '', 
-    titulo: '', 
-    descripcion: '', 
-    prioridad: 'Media', 
-    tipo: 'Correctivo', 
+  const [newOrder, setNewOrder] = useState({
+    equipo_id: equipos[0]?.id || '',
+    titulo: '',
+    descripcion: '',
+    prioridad: 'Media',
+    tipo: 'Correctivo',
     tecnico_asignado: '',
     sub_equipo: '',
     fecha_programada: new Date().toISOString().split('T')[0],
@@ -58,12 +58,12 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
     else {
       refreshData();
       setView('list');
-      setNewOrder({ 
-        equipo_id: equipos[0]?.id || '', 
-        titulo: '', 
-        descripcion: '', 
-        prioridad: 'Media', 
-        tipo: 'Correctivo', 
+      setNewOrder({
+        equipo_id: equipos[0]?.id || '',
+        titulo: '',
+        descripcion: '',
+        prioridad: 'Media',
+        tipo: 'Correctivo',
         tecnico_asignado: '',
         sub_equipo: '',
         fecha_programada: new Date().toISOString().split('T')[0],
@@ -74,12 +74,42 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
-    const { error } = await supabase.from('ordenes_trabajo').update({ 
-      estado: newStatus, 
-      foto_antes: fotoAntes, 
-      foto_despues: fotoDespues 
+    const { data: orderData } = await supabase.from('ordenes_trabajo').select('*').eq('id', id).single();
+    
+    const { error } = await supabase.from('ordenes_trabajo').update({
+      estado: newStatus,
+      foto_antes: fotoAntes,
+      foto_despues: fotoDespues
     }).eq('id', id);
+
     if (!error) {
+      // Si la OT es una inspección y se finaliza, actualizamos el plan automáticamente
+      if (newStatus === 'Finalizada' && (
+        orderData.tipo === 'Inspección' || 
+        orderData.tipo === 'Auditoría' || 
+        (orderData.titulo || '').toLowerCase().includes('inspección')
+      )) {
+        // Buscar el plan correspondiente a este equipo y tipo de tarea
+        const { data: plans } = await supabase.from('plan_mantenimiento')
+          .select('*')
+          .eq('equipo_id', orderData.equipo_id);
+        
+        if (plans && plans.length > 0) {
+          // Intentar emparejar por título/tarea o simplemente tomar el más relevante
+          const match = plans.find(p => 
+            orderData.titulo.toUpperCase().includes(p.tarea.toUpperCase()) || 
+            p.tarea.toUpperCase().includes(orderData.titulo.toUpperCase())
+          ) || plans[0];
+
+          const nextDate = new Date(); // Basado en la fecha de hoy (completado real)
+          nextDate.setMonth(nextDate.getMonth() + (Number(match.frecuencia_meses) || 12));
+          
+          await supabase.from('plan_mantenimiento').update({
+            proxima_fecha: nextDate.toISOString().split('T')[0]
+          }).eq('id', match.id);
+        }
+      }
+
       refreshData();
       setView('list');
       setFotoAntes(null);
@@ -89,9 +119,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
 
   const handleDeleteOrder = async (id) => {
     if (!id) return;
-    
+
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', id);
-    
+
     if (error) {
       console.error("Error de borrado:", error);
       alert(`Error de base de datos: ${error.message}`);
@@ -134,13 +164,13 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
   };
 
   const handleCompletePlanTask = async (plan) => {
-    const nextDate = new Date(plan.fecha_proxima);
+    const nextDate = new Date(plan.proxima_fecha);
     nextDate.setMonth(nextDate.getMonth() + (Number(plan.frecuencia_meses) || 12));
-    
-    const { error } = await supabase.from('plan_mantenimiento').update({ 
-      fecha_proxima: nextDate.toISOString().split('T')[0] 
+
+    const { error } = await supabase.from('plan_mantenimiento').update({
+      proxima_fecha: nextDate.toISOString().split('T')[0]
     }).eq('id', plan.id);
-    
+
     if (error) alert('Error al actualizar fecha');
     else {
       alert("¡Inspección completada! Fecha actualizada para el próximo ciclo.");
@@ -187,9 +217,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest ml-1">Equipo Principal</label>
-              <select 
-                value={newOrder.equipo_id} 
-                onChange={(e) => setNewOrder({...newOrder, equipo_id: e.target.value})} 
+              <select
+                value={newOrder.equipo_id}
+                onChange={(e) => setNewOrder({ ...newOrder, equipo_id: e.target.value })}
                 className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
               >
                 {equipos.map(eq => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}
@@ -199,13 +229,13 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             {esSatelite && (
               <div className="flex flex-col gap-1 animate-in slide-in-from-top-2">
                 <label className="text-[8px] font-black text-primary uppercase tracking-widest ml-1 italic">Nº Unidad / Satélite</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   list="sub-equipos-list"
                   placeholder="ID Satélite..."
-                  value={newOrder.sub_equipo} 
-                  onChange={(e) => setNewOrder({...newOrder, sub_equipo: e.target.value})} 
-                  className="w-full bg-[#1A1A1A] border border-primary/30 rounded-lg py-2 px-3 text-[11px] font-black text-white outline-none focus:border-primary placeholder:text-gray-800" 
+                  value={newOrder.sub_equipo}
+                  onChange={(e) => setNewOrder({ ...newOrder, sub_equipo: e.target.value })}
+                  className="w-full bg-[#1A1A1A] border border-primary/30 rounded-lg py-2 px-3 text-[11px] font-black text-white outline-none focus:border-primary placeholder:text-gray-800"
                 />
                 <datalist id="sub-equipos-list">
                   {getSubEquiposSugeridos().map(sub => <option key={sub} value={sub} />)}
@@ -216,12 +246,12 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
 
           <div className="flex flex-col gap-1">
             <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest ml-1">Asunto</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Describa el problema..."
-              value={newOrder.titulo} 
-              onChange={(e) => setNewOrder({...newOrder, titulo: e.target.value})} 
-              className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary" 
+              value={newOrder.titulo}
+              onChange={(e) => setNewOrder({ ...newOrder, titulo: e.target.value })}
+              className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
             />
           </div>
 
@@ -233,10 +263,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                   {['Baja', 'Media', 'Alta', 'Crítica'].map(p => (
                     <button
                       key={p}
-                      onClick={() => setNewOrder({...newOrder, prioridad: p})}
-                      className={`py-1.5 rounded-md text-[7px] font-black uppercase border transition-all ${
-                        newOrder.prioridad === p ? activePriorityStyles[p] : priorityStyles[p]
-                      }`}
+                      onClick={() => setNewOrder({ ...newOrder, prioridad: p })}
+                      className={`py-1.5 rounded-md text-[7px] font-black uppercase border transition-all ${newOrder.prioridad === p ? activePriorityStyles[p] : priorityStyles[p]
+                        }`}
                     >
                       {p}
                     </button>
@@ -249,10 +278,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                   {['Preventivo', 'Correctivo', 'Predictivo', 'Auditoría'].map(t => (
                     <button
                       key={t}
-                      onClick={() => setNewOrder({...newOrder, tipo: t})}
-                      className={`py-1.5 rounded-md text-[7px] font-black uppercase border transition-all ${
-                        newOrder.tipo === t ? 'bg-white text-black border-white' : 'bg-[#111] border-[#222] text-gray-500'
-                      }`}
+                      onClick={() => setNewOrder({ ...newOrder, tipo: t })}
+                      className={`py-1.5 rounded-md text-[7px] font-black uppercase border transition-all ${newOrder.tipo === t ? 'bg-white text-black border-white' : 'bg-[#111] border-[#222] text-gray-500'
+                        }`}
                     >
                       {t}
                     </button>
@@ -264,8 +292,8 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             <div className="flex flex-col gap-1.5">
               <label className="text-[8px] font-black text-primary uppercase tracking-widest ml-1">Evidencia Inicial</label>
               <div className="flex items-center gap-3">
-                <div 
-                  onClick={() => fileInputAntes.current.click()} 
+                <div
+                  onClick={() => fileInputAntes.current.click()}
                   className="w-16 h-16 bg-[#111] border border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-primary/40 transition-all shrink-0"
                 >
                   {newOrder.foto_antes ? (
@@ -279,45 +307,45 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                   <span className="text-[6px] text-gray-700 font-bold uppercase mt-0.5">La foto se adjuntará a la OT</span>
                 </div>
               </div>
-              <input type="file" ref={fileInputAntes} hidden capture="environment" onChange={(e) => handleCapture(e, (res) => setNewOrder({...newOrder, foto_antes: res}))} />
+              <input type="file" ref={fileInputAntes} hidden capture="environment" onChange={(e) => handleCapture(e, (res) => setNewOrder({ ...newOrder, foto_antes: res }))} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest ml-1">Técnico</label>
-              <input 
-                type="text" 
-                value={newOrder.tecnico_asignado} 
-                onChange={(e) => setNewOrder({...newOrder, tecnico_asignado: e.target.value})} 
-                className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary" 
+              <input
+                type="text"
+                value={newOrder.tecnico_asignado}
+                onChange={(e) => setNewOrder({ ...newOrder, tecnico_asignado: e.target.value })}
+                className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest ml-1">Fecha</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={newOrder.fecha_programada}
-                onChange={(e) => setNewOrder({...newOrder, fecha_programada: e.target.value})}
-                className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary [color-scheme:dark]" 
+                onChange={(e) => setNewOrder({ ...newOrder, fecha_programada: e.target.value })}
+                className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary [color-scheme:dark]"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest ml-1">Detalles</label>
-            <textarea 
-              rows="2" 
-              value={newOrder.descripcion} 
-              onChange={(e) => setNewOrder({...newOrder, descripcion: e.target.value})} 
+            <textarea
+              rows="2"
+              value={newOrder.descripcion}
+              onChange={(e) => setNewOrder({ ...newOrder, descripcion: e.target.value })}
               className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-[11px] font-medium text-white outline-none focus:border-primary resize-none"
             ></textarea>
           </div>
         </div>
 
         <div className="fixed bottom-0 right-0 w-full bg-black/80 backdrop-blur-xl border-t border-white/5 p-4 flex justify-center z-[110]">
-          <button 
-            onClick={handleSaveOrder} 
+          <button
+            onClick={handleSaveOrder}
             className="w-full py-3 bg-primary rounded-xl text-[9px] font-black uppercase text-black tracking-[0.2em] shadow-lg shadow-primary/20"
           >
             Emitir Orden Técnica
@@ -344,7 +372,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             <button onClick={() => { setView('list'); setIsEditing(false); }} className="p-1.5 hover:bg-white/5 rounded-full transition-colors"><ChevronLeft size={20} className="text-gray-400" /></button>
             <div>
               <h2 className="text-[11px] font-black text-white uppercase tracking-widest">Expediente Técnico</h2>
-              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">OT #{selectedOrder.id.slice(0,8)}</p>
+              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">OT #{selectedOrder.id.slice(0, 8)}</p>
             </div>
           </div>
           {!isEditing && (
@@ -361,11 +389,11 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Título</label>
-                <input type="text" value={editOrder.titulo} onChange={(e) => setEditOrder({...editOrder, titulo: e.target.value})} className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-white font-bold outline-none focus:border-primary" />
+                <input type="text" value={editOrder.titulo} onChange={(e) => setEditOrder({ ...editOrder, titulo: e.target.value })} className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-white font-bold outline-none focus:border-primary" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Descripción</label>
-                <textarea rows="5" value={editOrder.descripcion} onChange={(e) => setEditOrder({...editOrder, descripcion: e.target.value})} className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-white outline-none focus:border-primary resize-none" />
+                <textarea rows="5" value={editOrder.descripcion} onChange={(e) => setEditOrder({ ...editOrder, descripcion: e.target.value })} className="w-full bg-[#111] border border-[#222] rounded-lg py-2 px-3 text-white outline-none focus:border-primary resize-none" />
               </div>
               <button onClick={handleUpdateOrder} className="w-full py-3 bg-primary text-black font-black uppercase text-[10px] tracking-widest rounded-xl flex items-center justify-center gap-2"><Save size={16} /> Guardar</button>
             </div>
@@ -382,7 +410,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                   {selectedOrder.sub_equipo && <span className="text-primary text-[9px] font-black uppercase">Unidad: {selectedOrder.sub_equipo}</span>}
                 </div>
                 <p className="text-gray-400 text-[11px] font-medium mt-1 leading-relaxed">{selectedOrder.titulo}</p>
-                
+
                 <div className="mt-4 grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                   <div className="flex flex-col">
                     <span className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Estado</span>
@@ -454,7 +482,7 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             <h2 className="text-[14px] font-black uppercase tracking-[0.3em] text-white italic">Mantenimiento Industrial</h2>
             <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Control de Activos y Planificación</p>
           </div>
-          
+
           {/* SELECTOR DE PESTAÑA PRINCIPAL */}
           <div className="flex bg-[#111] p-1 rounded-xl border border-white/5 w-full md:w-64">
             <button onClick={() => setMainTab('ots')} className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mainTab === 'ots' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-600 hover:text-gray-400'}`}>Órdenes (OT)</button>
@@ -475,9 +503,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
       {mainTab === 'ots' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {ordenes.length > 0 ? (
-            ordenes.filter(o => 
-              o.tipo !== 'Auditoría' && 
-              o.tipo !== 'Inspección' && 
+            ordenes.filter(o =>
+              o.tipo !== 'Auditoría' &&
+              o.tipo !== 'Inspección' &&
               !(o.titulo || '').toLowerCase().includes('inspección')
             ).map(ord => {
               const eq = equipos.find(e => e.id === ord.equipo_id);
@@ -489,16 +517,16 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
               };
 
               return (
-                <div key={ord.id} onClick={() => { 
-                  setSelectedOrder(ord); 
+                <div key={ord.id} onClick={() => {
+                  setSelectedOrder(ord);
                   setFotoAntes(ord.foto_antes);
                   setFotoDespues(ord.foto_despues);
-                  setView('detail'); 
+                  setView('detail');
                 }} className="industrial-card p-4 bg-[#0D0D0D] border-[#222] group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden rounded-xl">
                   <div className="absolute top-0 left-0 w-0.5 h-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex flex-col">
-                      <span className="text-[7px] font-black text-gray-600 tracking-widest uppercase">#{ord.id.slice(0,8)}</span>
+                      <span className="text-[7px] font-black text-gray-600 tracking-widest uppercase">#{ord.id.slice(0, 8)}</span>
                       <div className="flex items-center gap-1">
                         <h3 className="text-white text-[12px] font-black uppercase tracking-tight mt-0.5">{eq?.nombre || 'Equipo'}</h3>
                         {ord.sub_equipo && <span className="text-primary text-[7px] font-black mt-0.5">({ord.sub_equipo})</span>}
@@ -516,9 +544,9 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                       <span className="text-[8px] text-white font-black uppercase tracking-widest">{ord.estado}</span>
                     </div>
                   </div>
-                  
+
                   {/* Botón de borrado rápido */}
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.id); }}
                     className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-red-500 hover:text-white"
                     title="Eliminar OT"
@@ -530,8 +558,8 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             })
           ) : (
             <div className="col-span-full py-20 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl opacity-20">
-               <Clock size={24} className="text-gray-400 mb-2" />
-               <p className="text-[8px] font-black uppercase tracking-[0.3em]">Sin órdenes activas</p>
+              <Clock size={24} className="text-gray-400 mb-2" />
+              <p className="text-[8px] font-black uppercase tracking-[0.3em]">Sin órdenes activas</p>
             </div>
           )}
         </div>
@@ -543,13 +571,13 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
             <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
               <Plus size={14} /> Programar Inspección
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Equipo Principal</label>
-                <select 
-                  value={newPlan.equipo_id} 
-                  onChange={(e) => setNewPlan({...newPlan, equipo_id: e.target.value})}
+                <select
+                  value={newPlan.equipo_id}
+                  onChange={(e) => setNewPlan({ ...newPlan, equipo_id: e.target.value })}
                   className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary appearance-none"
                 >
                   {equipos.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
@@ -558,11 +586,11 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Título de Inspección</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Ej: Inspección Nivel B..."
-                  value={newPlan.tarea} 
-                  onChange={(e) => setNewPlan({...newPlan, tarea: e.target.value})}
+                  value={newPlan.tarea}
+                  onChange={(e) => setNewPlan({ ...newPlan, tarea: e.target.value })}
                   className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
                 />
               </div>
@@ -570,25 +598,25 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Cada (Meses)</label>
-                  <input 
-                    type="number" 
-                    value={newPlan.frecuencia_meses} 
-                    onChange={(e) => setNewPlan({...newPlan, frecuencia_meses: e.target.value})}
+                  <input
+                    type="number"
+                    value={newPlan.frecuencia_meses}
+                    onChange={(e) => setNewPlan({ ...newPlan, frecuencia_meses: e.target.value })}
                     className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest ml-1">Próxima Fecha</label>
-                  <input 
-                    type="date" 
-                    value={newPlan.fecha_proxima} 
-                    onChange={(e) => setNewPlan({...newPlan, fecha_proxima: e.target.value})}
+                  <input
+                    type="date"
+                    value={newPlan.proxima_fecha}
+                    onChange={(e) => setNewPlan({ ...newPlan, proxima_fecha: e.target.value })}
                     className="w-full bg-[#111] border border-white/10 rounded-lg py-2 px-3 text-[11px] font-bold text-white outline-none focus:border-primary [color-scheme:dark]"
                   />
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleSavePlan}
                 className="w-full py-3 bg-white/5 border border-white/10 text-white text-[9px] font-black uppercase rounded-xl hover:bg-primary hover:text-black hover:border-primary transition-all mt-4"
               >
@@ -622,18 +650,18 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
                     <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
                       <div className="flex flex-col text-left md:text-right">
                         <span className="text-[7px] text-gray-600 font-black uppercase tracking-widest italic">Siguiente Vencimiento</span>
-                        <span className="text-[11px] text-white font-black uppercase tracking-widest mt-0.5">{new Date(plan.fecha_proxima).toLocaleDateString()}</span>
+                        <span className="text-[11px] text-white font-black uppercase tracking-widest mt-0.5">{new Date(plan.proxima_fecha).toLocaleDateString()}</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        <button 
+                        <button
                           onClick={() => handleCompletePlanTask(plan)}
                           className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary text-[8px] font-black uppercase rounded-lg hover:bg-primary hover:text-black transition-all flex items-center gap-2"
                           title="Completar y Programar Siguiente"
                         >
                           <RefreshCw size={12} /> Completar Ciclo
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeletePlan(plan.id)}
                           className="p-2 text-gray-600 hover:text-red-500 transition-colors"
                         >

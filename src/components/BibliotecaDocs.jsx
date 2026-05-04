@@ -221,7 +221,8 @@ const BibliotecaDocs = () => {
                 
                 <button 
                   onClick={() => {
-                    const url = `${window.location.origin}/documentos/${doc.filename}`;
+                    const encodedFilename = encodeURI(doc.filename);
+                    const url = `${window.location.origin}/documentos/${encodedFilename}`;
                     window.open(url, '_blank');
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] border border-[#333] text-white text-[9px] font-black uppercase rounded-lg hover:bg-primary hover:text-black transition-all"
