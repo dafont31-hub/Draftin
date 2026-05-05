@@ -19,6 +19,15 @@ import { translations } from './translations'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // DESBLOQUEO DE EMERGENCIA
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [userRole, setUserRole] = useState(null)
   const [userName, setUserName] = useState('')
   const [activeTab, setActiveTab] = useState('inicio')
