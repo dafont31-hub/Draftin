@@ -124,71 +124,33 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
     }
   };
 
-  const [pendingSync, setPendingSync] = useState(false);
-
-  useEffect(() => {
-    const checkPending = localStorage.getItem('draftin_pending_revision');
-    if (checkPending) setPendingSync(true);
-
-    const handleSync = async () => {
-      if (navigator.onLine) {
-        const pending = localStorage.getItem('draftin_pending_revision');
-        if (pending) {
-          try {
-            const data = JSON.parse(pending);
-            const { error } = await supabase.from('revisiones_diarias').upsert([data], { onConflict: 'fecha' });
-            if (!error) {
-              localStorage.removeItem('draftin_pending_revision');
-              setPendingSync(false);
-              if (refreshData) refreshData();
-            }
-          } catch (e) {
-            console.error("Error sincronizando:", e);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('online', handleSync);
-    return () => window.removeEventListener('online', handleSync);
-  }, [refreshData]);
-
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+    e.preventDefault();
     setLoading(true);
+    const { error } = await supabase.from('revisiones_diarias').upsert([{
+      datos_calderas: formData.calderas,
+      datos_desgasificador: formData.desgasificador,
+      datos_intercambiadores: formData.intercambiadores,
+      datos_quimica: formData.quimica,
+      datos_salmuera: formData.salmuera,
+      datos_descalcificadores: formData.descalcificadores,
+      datos_bote: formData.bote,
+      observaciones: formData.observaciones,
+      fecha: formData.fecha,
+      operario: formData.operario
+    }], { onConflict: 'fecha' });
 
-    const payload = { 
-      fecha: formData.fecha, 
-      operario: formData.operario || userName || 'OPERARIO', 
-      datos: formData 
-    };
-
-    if (!navigator.onLine) {
-      localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
-      setPendingSync(true);
-      alert('MODO OFFLINE: Los datos se han guardado localmente y se subirán automáticamente al recuperar la conexión.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from('revisiones_diarias').upsert([payload], { onConflict: 'fecha' });
-      if (error) throw error;
-      
-      localStorage.removeItem('draftin_pending_revision');
-      setPendingSync(false);
+    if (!error) {
+      await processChecklistData(formData, formData.fecha);
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(() => setSuccess(false), 3000);
       if (refreshData) refreshData();
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al guardar. Se ha guardado una copia local de seguridad.');
-      localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
-      setPendingSync(true);
-    } finally {
-      setLoading(false);
+    } else {
+      console.error('Error guardando revisión:', error);
+      alert('ERROR AL GUARDAR: ' + (error.message || 'Error de conexión con la base de datos'));
     }
+    setLoading(false);
   };
 
   return (
@@ -207,16 +169,7 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
 
       {activeTab === 'nuevo' ? (
         <form onSubmit={handleSubmit} className="animate-in slide-in-from-left-5 duration-300">
-           {pendingSync && (
-             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between animate-pulse">
-               <div className="flex items-center gap-3">
-                 <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_#EF4444]"></div>
-                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Revisión pendiente de sincronizar (Modo Offline)</span>
-               </div>
-               <span className="text-[8px] font-bold text-red-400">SE SUBIRÁ AL RECUPERAR INTERNET</span>
-             </div>
-           )}
-           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
+           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00FF88] text-black text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
            
            <Header title="0. INFORMACIÓN GENERAL" color="text-white" />
            <div className="grid grid-cols-2 gap-4 mb-10">

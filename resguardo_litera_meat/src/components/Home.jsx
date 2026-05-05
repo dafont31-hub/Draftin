@@ -4,100 +4,6 @@ import { generateOrderReport } from '../services/reportService';
 import { Activity, Bell, AlertTriangle } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
-const LatestRevisionStatus = ({ t }) => {
-  const [lastRevision, setLastRevision] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchLast() {
-      try {
-        const { data, error } = await supabase
-          .from('revisiones_diarias')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (data && data[0]) setLastRevision(data[0]);
-      } catch (err) {
-        console.error("Error cargando última revisión:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchLast();
-  }, []);
-
-  if (loading || !lastRevision) return (
-    <div className="mb-8 p-4 bg-white/[0.02] border border-dashed border-white/5 rounded-2xl flex items-center justify-center">
-      <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Esperando primera recogida de datos...</span>
-    </div>
-  );
-
-  let statusData = {};
-  try {
-    statusData = typeof lastRevision.datos === 'string' ? JSON.parse(lastRevision.datos) : (lastRevision.datos || {});
-  } catch (e) {
-    statusData = {};
-  }
-
-  const caldera1 = statusData?.calderas?.G1 || {};
-  const suave1 = statusData?.quimica?.['Suavizador 1'] || {};
-
-  return (
-    <div className="mb-8 p-4 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-all">
-      <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-        <Activity size={40} />
-      </div>
-      
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#00843D] shadow-[0_0_10px_#00843D]"></div>
-        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Sincronización Planta (Última: {lastRevision.fecha})</h4>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="space-y-1">
-          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Presión Caldera 1</p>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-2xl font-black tracking-tighter ${parseFloat(caldera1.pt) > 11 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-              {caldera1.pt || '--'}
-            </span>
-            <span className="text-[9px] font-bold text-white/20 uppercase">Bar</span>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Temp. Vapor</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tighter text-white">
-              {caldera1.tv || '--'}
-            </span>
-            <span className="text-[9px] font-bold text-white/20 uppercase">°C</span>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Dureza Suav. 1</p>
-          <div className="flex items-center gap-2">
-            <span className={`text-2xl font-black tracking-tighter ${parseFloat(suave1.d) > 0 ? 'text-red-500 animate-pulse' : 'text-[#00843D]'}`}>
-              {suave1.d || '0'}
-            </span>
-            <span className="text-[9px] font-bold text-white/20 uppercase">ºF</span>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Operario</p>
-          <div className="flex items-center gap-2 overflow-hidden">
-            <span className="text-sm font-black text-white/80 uppercase truncate">
-              {lastRevision.operario || 'SISTEMA'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [chartReady, setChartReady] = useState(false);
@@ -206,10 +112,10 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
       {/* STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: safeOrdenes.filter(o => o.estado !== 'Finalizada').length, color: 'text-white' },
-          { label: t('en_progreso') || 'En Proceso', val: safeOrdenes.filter(o => o.estado === 'En Progreso').length, color: 'text-primary' },
-          { label: t('urgentes') || 'Urgentes', val: safeOrdenes.filter(o => o.prioridad === 'Urgente' && o.estado !== 'Finalizada').length, color: 'text-red-500' },
-          { label: t('completado') || 'Finalizadas', val: safeOrdenes.filter(o => o.estado === 'Finalizada').length, color: 'text-[#00843D]' }
+          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: 0, color: 'text-white' },
+          { label: t('en_progreso') || 'En Proceso', val: 0, color: 'text-primary' },
+          { label: t('urgentes') || 'Urgentes', val: 0, color: 'text-red-500' },
+          { label: t('completado') || 'Finalizadas', val: 0, color: 'text-[#00FF88]' }
         ].map((s, i) => (
           <div key={i} className="flex flex-col gap-0.5 border-l border-white/5 pl-3">
              <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em]">{s.label}</span>
@@ -217,9 +123,6 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
           </div>
         ))}
       </div>
-
-      {/* GEMELO DIGITAL - ÚLTIMA LECTURA */}
-      <LatestRevisionStatus t={t} />
 
       <div className="flex flex-col lg:flex-row gap-10">
         <div className="flex-1 min-w-0 space-y-6">

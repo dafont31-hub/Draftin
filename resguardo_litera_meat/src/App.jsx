@@ -260,9 +260,9 @@ function App() {
               <div className="relative group">
                 <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <h1 className="relative text-[12px] xs:text-[16px] md:text-[20px] font-black uppercase tracking-[0.1em] xs:tracking-[0.2em] md:tracking-[0.3em] italic text-white flex items-center gap-2 md:gap-3">
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.2)]">LITERA MEAT</span>
+                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.2)]">DRAFTIN</span>
                   <span className="hidden xs:inline text-gray-400 font-light not-italic">|</span>
-                  <span className="hidden sm:inline tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 drop-shadow-md">GESTIÓN TÉRMICA</span>
+                  <span className="hidden sm:inline tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 drop-shadow-md">THERMAL MASTER</span>
                 </h1>
               </div>
             </div>
