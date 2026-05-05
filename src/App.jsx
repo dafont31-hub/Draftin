@@ -20,11 +20,11 @@ function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // DESBLOQUEO DE EMERGENCIA
+  // DESBLOQUEO DE EMERGENCIA (TIMEOUT DE CARGA)
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 4000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
