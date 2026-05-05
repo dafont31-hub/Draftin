@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import GestionUsuarios from './GestionUsuarios';
 import BibliotecaDocs from './BibliotecaDocs';
-import { Settings, Shield, FileText, Cpu, Layout, MessageSquare, Database } from 'lucide-react';
+import { Settings, Shield, FileText, Cpu, Layout, MessageSquare, Database, Zap } from 'lucide-react';
 
-const Configuracion = ({ t, setActiveTab }) => {
-  const [activeSubTab, setActiveSubTab] = useState('docs'); 
+const Configuracion = ({ t, setActiveTab, equipos }) => {
+  const [activeSubTab, setActiveSubTab] = useState('labels'); 
   const [aiConfig, setAiConfig] = useState({ provider: 'google', api_key: '', model: 'gemini-1.5-flash', activo: true });
   const [saveStatus, setSaveStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchAIConfig();
@@ -34,6 +35,7 @@ const Configuracion = ({ t, setActiveTab }) => {
   const menuItems = [
     { id: 'ai', label: 'AI_CEREBRO', icon: MessageSquare, color: 'text-pink-500' },
     { id: 'branding', label: 'PERSONALIZACIÓN', icon: Layout, color: 'text-orange-500' },
+    { id: 'labels', label: 'ETIQUETAS QR', icon: Zap, color: 'text-yellow-500' },
   ];
 
   const [brandingConfig, setBrandingConfig] = useState({ empresa_nombre: '', logo_url: '', color_primario: '#FF6B00' });
@@ -59,6 +61,25 @@ const Configuracion = ({ t, setActiveTab }) => {
       notifySave();
       setTimeout(() => window.location.reload(), 1000); 
     }
+  };
+
+  const handlePrintSingle = (id) => {
+    // Añadimos una clase al body para identificar qué estamos imprimiendo
+    const cards = document.querySelectorAll('.qr-card-print');
+    cards.forEach(card => {
+      if (card.id === `qr-${id}`) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    
+    window.print();
+    
+    // Limpiamos después de imprimir (volvemos a dejar que el CSS controle)
+    cards.forEach(card => {
+      card.style.display = '';
+    });
   };
 
   return (
@@ -213,6 +234,110 @@ const Configuracion = ({ t, setActiveTab }) => {
                    </button>
                 </div>
              </div>
+          </div>
+        )}
+
+        {activeSubTab === 'labels' && (
+          <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-500">
+            {/* ETIQUETA MAESTRA PARA SATÉLITES */}
+            <div className="p-8 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-3xl mb-10 flex flex-col md:flex-row items-center gap-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 bg-primary/20 text-primary text-[8px] font-black uppercase tracking-widest rounded-bl-2xl">Recomendado para Satélites</div>
+              <div className="bg-white p-4 rounded-2xl shadow-2xl">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/?tab=scan&eq_id=master-sat')}`} 
+                  alt="QR MAESTRO"
+                  className="w-32 h-32"
+                />
+              </div>
+              <div className="flex-1 space-y-4">
+                <h3 className="text-white text-[16px] font-black uppercase italic tracking-widest">Etiqueta Maestra de Satélites</h3>
+                <p className="text-gray-400 text-[11px] leading-relaxed uppercase font-bold">
+                  Imprime 60 copias de esta etiqueta. Al escanearla, la App pedirá al operario que seleccione el número de satélite. <br/>
+                  <span className="text-primary/70">Ideal cuando no conoces los códigos exactos de cada equipo.</span>
+                </p>
+                <button 
+                  onClick={() => handlePrintSingle('master-sat')}
+                  className="px-8 py-3 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                >
+                  Imprimir Etiqueta Maestra
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
+              <div className="flex-1 w-full">
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-3">Buscador de Equipos ({equipos?.length || 0})</p>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="BUSCAR EQUIPO O SATÉLITE..." 
+                    className="w-full bg-black border border-white/10 text-white text-[11px] p-4 pl-12 rounded-2xl outline-none focus:border-primary font-black tracking-widest"
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                    <Database size={18} />
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => window.print()}
+                className="w-full md:w-auto px-10 py-5 bg-primary text-black rounded-2xl font-black uppercase text-[11px] tracking-widest hover:brightness-110 transition-all shadow-xl shadow-primary/20"
+              >
+                Imprimir Selección
+              </button>
+            </div>
+
+            {!equipos || equipos.length === 0 ? (
+              <div className="p-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">No se han encontrado equipos configurados</p>
+              </div>
+            ) : (
+              <div id="printable-area" className="qr-print-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {equipos
+                  .filter(eq => eq.sistema !== 'Limpieza') // Ocultamos los satélites individuales
+                  .filter(eq => eq.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || eq.sistema.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map(eq => {
+                // Mapeo de categorías a secciones del formulario
+                const sectionMap = {
+                  'Calderas': 'calderas',
+                  'Descalcificadores': 'descalcificadores',
+                  'Desgasificador': 'desgasificador',
+                  'Intercambiadores': 'intercambiadores',
+                  'Química': 'control-quimico'
+                };
+                const section = sectionMap[eq.categoria] || 'calderas';
+                
+                return (
+                  <div key={eq.id} id={`qr-${eq.id}`} className="qr-card-print bg-black/40 border border-white/5 p-6 rounded-3xl flex flex-col items-center gap-4 group hover:border-primary/50 transition-all">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20 text-lg">
+                      {eq.categoria === 'Calderas' ? '♨️' : 
+                       eq.categoria === 'Intercambiadores' ? '🔄' : 
+                       eq.categoria === 'Satélites' ? '🛰️' : 
+                       eq.categoria === 'Tratamiento de agua' ? '💧' : '⚙️'}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[12px] font-black text-white uppercase mb-1">{eq.nombre}</p>
+                      <p className="text-[7px] text-white/40 font-bold uppercase tracking-tighter">{eq.categoria}</p>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/?tab=scan&eq_id=' + eq.id)}`} 
+                        alt="QR"
+                        className="w-28 h-28"
+                      />
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handlePrintSingle(eq.id); }}
+                      className="w-full py-2 bg-white/5 hover:bg-white/10 text-[8px] font-black text-white uppercase rounded-lg transition-all border border-white/5 print:hidden"
+                    >
+                      Imprimir Etiqueta
+                    </button>
+                    <div className="text-[8px] font-black text-gray-500 uppercase mt-1 tracking-widest hidden print:block">LITERA MEAT - {eq.nombre}</div>
+                  </div>
+                );
+              })}
+              </div>
+            )}
           </div>
         )}
 
