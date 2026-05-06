@@ -155,25 +155,19 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
   }, [activeTab]);
 
   useEffect(() => {
-    const checkPending = localStorage.getItem('draftin_pending_revision');
-    if (checkPending) setPendingSync(true);
-
-    const handleSync = async () => {
+    const pending = localStorage.getItem('draftin_pending_revision');
+    if (pending) {
+      setPendingSync(true);
+      // Intentar sincronizar automáticamente si ya estamos online al cargar
       if (navigator.onLine) {
-        const pending = localStorage.getItem('draftin_pending_revision');
-        if (pending) {
-          try {
-            const data = JSON.parse(pending);
-            const { error } = await supabase.from('revisiones_diarias').upsert([data], { onConflict: 'fecha' });
-            if (!error) {
-              localStorage.removeItem('draftin_pending_revision');
-              setPendingSync(false);
-              if (refreshData) refreshData();
-            }
-          } catch (e) {
-            console.error("Error sincronizando:", e);
-          }
-        }
+        console.log("Detectada revisión pendiente y conexión activa. Sincronizando...");
+        handleSubmit();
+      }
+    }
+
+    const handleSync = () => {
+      if (navigator.onLine && localStorage.getItem('draftin_pending_revision')) {
+        handleSubmit();
       }
     };
 
@@ -327,14 +321,22 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
       {activeTab === 'nuevo' ? (
         <form onSubmit={handleSubmit} className="animate-in slide-in-from-left-5 duration-300">
            {pendingSync && (
-             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between animate-pulse">
-               <div className="flex items-center gap-3">
-                 <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_#EF4444]"></div>
-                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Revisión pendiente de sincronizar (Modo Offline)</span>
-               </div>
-               <span className="text-[8px] font-bold text-red-400">SE SUBIRÁ AL RECUPERAR INTERNET</span>
-             </div>
-           )}
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-8 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+            <div>
+              <p className="text-red-500 text-[10px] font-black uppercase italic tracking-widest">Revisión pendiente de sincronizar</p>
+              <p className="text-red-400/60 text-[9px] uppercase font-bold tracking-widest">Se subirá automáticamente al recuperar internet</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => handleSubmit()}
+            className="bg-red-500 text-white text-[9px] font-black px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors uppercase tracking-widest"
+          >
+            Sincronizar ahora
+          </button>
+        </div>
+      )}
            {success && (
              <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white p-4 rounded-2xl shadow-2xl z-50 animate-bounce flex flex-col items-center gap-2 border border-white/20 backdrop-blur-md">
                <span className="text-[11px] font-black uppercase tracking-widest">SINC_EXITOSA_OK</span>
