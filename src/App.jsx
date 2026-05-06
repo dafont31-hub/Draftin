@@ -142,17 +142,21 @@ function App() {
 
   async function fetchSaaSConfig() {
     try {
-      const { data: nav, error: e1 } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden')
-      const { data: brand, error: e2 } = await supabase.from('app_config_branding').select('*').single()
-      const { data: groups, error: e3 } = await supabase.from('app_config_grupos').select('*').order('orden')
-      
-      if (e1) console.error("Error cargando pestañas:", e1);
-      if (e2) console.error("Error cargando branding:", e2);
-      if (e3) console.error("Error cargando grupos:", e3);
+      // Cargamos configuraciones en paralelo para mayor velocidad
+      const [navRes, brandRes, groupRes] = await Promise.all([
+        supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden'),
+        supabase.from('app_config_branding').select('*').maybeSingle(),
+        supabase.from('app_config_grupos').select('*').order('orden')
+      ]);
 
-      if (nav && nav.length > 0) {
-        setNavItems(nav);
-      } else if (nav && nav.length === 0) {
+      if (navRes.error) console.warn("Error cargando pestañas:", navRes.error);
+      if (brandRes.error) console.warn("Error cargando branding:", brandRes.error);
+      if (groupRes.error) console.warn("Error cargando grupos:", groupRes.error);
+
+      // Pestañas (Nav)
+      if (navRes.data && navRes.data.length > 0) {
+        setNavItems(navRes.data);
+      } else {
         console.warn("No hay pestañas activas. Restaurando valores por defecto...");
         const defaults = [
           { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin'], activo: true },
@@ -161,18 +165,17 @@ function App() {
           { label: 'MANUALES', icon: 'library', tab_id: 'documentacion', orden: 4, roles: ['admin', 'operario'], activo: true },
           { label: 'CONFIG', icon: 'configuracion', tab_id: 'configuracion', orden: 10, roles: ['admin'], activo: true }
         ];
-        for (const t of defaults) {
-          await supabase.from('app_config_pestanas').upsert(t, { onConflict: 'tab_id' });
-        }
-        const { data: retryNav } = await supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden');
-        if (retryNav) setNavItems(retryNav);
+        setNavItems(defaults);
       }
       
-      if (groups) setAppConfigGrupos(groups)
-      if (brand) {
-        setBranding(brand)
-        const hex = brand.color_primario || '#FF6B00';
-        document.documentElement.style.setProperty('--primary-color', hex)
+      // Grupos
+      if (groupRes.data) setAppConfigGrupos(groupRes.data);
+
+      // Branding
+      if (brandRes.data) {
+        setBranding(brandRes.data);
+        const hex = brandRes.data.color_primario || '#C1001B';
+        document.documentElement.style.setProperty('--primary-color', hex);
         
         // Convertir a RGB para transparencias
         const r = parseInt(hex.slice(1, 3), 16);

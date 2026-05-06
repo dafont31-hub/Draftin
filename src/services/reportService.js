@@ -200,9 +200,10 @@ export const generateChecklistReport = (record, branding = {}) => {
     };
 
     // 1. GENERADORES DE VAPOR
-    if (record.datos_calderas) {
-      const calData = Object.entries(record.datos_calderas).map(([id, d]) => [
-        id.toUpperCase(), d.nv, d.np, d.pt, d.tv, d.cond, d.hf, d.ga
+    const calderas = record.datos_calderas || (record.datos && record.datos.calderas);
+    if (calderas) {
+      const calData = Object.entries(calderas).map(([id, d]) => [
+        id.toUpperCase(), d.nv || '--', d.np || '--', d.pt || '--', d.tv || '--', d.cond || '--', d.hf || '--', d.ga || '--'
       ]);
       addSectionTable("1. GENERADORES DE VAPOR (CALDERAS)", 
         ["CAL", "NIVEL V.", "NIVEL %", "PRES.", "TEMP.", "COND.", "HORAS", "GAS"], 
@@ -210,19 +211,21 @@ export const generateChecklistReport = (record, branding = {}) => {
     }
 
     // 2. CONTROL QUÍMICO
-    if (record.datos_quimica) {
-      const chemData = Object.entries(record.datos_quimica).map(([id, d]) => [
-        id.toUpperCase(), d.d, d.ph, d.c
+    const quimica = record.datos_quimica || (record.datos && record.datos.quimica);
+    if (quimica) {
+      const chemData = Object.entries(quimica).map(([id, d]) => [
+        id.toUpperCase(), d.d || '--', d.ph || '--', d.c || '--'
       ]);
       addSectionTable("2. ANÁLISIS QUÍMICO DEL AGUA", 
         ["PUNTO", "DUREZA", "PH", "CONDUCTIVIDAD"], 
         chemData, [0, 163, 255]);
     }
 
-    // 3. DESCALCIFICADORES E INTERCAMBIADORES
-    if (record.datos_descalcificadores) {
-      const descData = Object.entries(record.datos_descalcificadores).map(([id, d]) => [
-        id.toUpperCase(), d.aa, d.ad
+    // 3. EQUIPOS DE TRATAMIENTO
+    const descalcificadores = record.datos_descalcificadores || (record.datos && record.datos.descalcificadores);
+    if (descalcificadores) {
+      const descData = Object.entries(descalcificadores).map(([id, d]) => [
+        id.toUpperCase(), d.aa || '--', d.ad || '--'
       ]);
       addSectionTable("3. EQUIPOS DE TRATAMIENTO (DESCALCIFICADORES)", 
         ["EQUIPO", "AGUA ANTES", "AGUA DESPUÉS"], 
@@ -232,7 +235,7 @@ export const generateChecklistReport = (record, branding = {}) => {
     // 4. SISTEMAS DE LIMPIEZA (SATÉLITES AC 35-B-S)
     const rawDatos = record.datos;
     const statusData = typeof rawDatos === 'string' ? JSON.parse(rawDatos) : (rawDatos || {});
-    const satelites = statusData.satelites || {};
+    const satelites = record.datos_satelites || statusData.satelites || {};
     
     if (Object.keys(satelites).length > 0) {
       const satData = Object.entries(satelites).map(([id, d]) => {

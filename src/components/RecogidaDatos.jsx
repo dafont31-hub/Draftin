@@ -185,10 +185,20 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
     if (e) e.preventDefault();
     setLoading(true);
 
+    // Mapeo detallado para coincidir con el esquema de la DB
     const payload = { 
       fecha: formData.fecha, 
       operario: formData.operario || userName || 'OPERARIO', 
-      datos: formData 
+      datos_calderas: formData.calderas,
+      datos_desgasificador: formData.desgasificador,
+      datos_intercambiadores: formData.intercambiadores,
+      datos_quimica: formData.quimica,
+      datos_salmuera: formData.salmuera,
+      datos_descalcificadores: formData.descalcificadores,
+      datos_bote: formData.bote,
+      datos_satelites: formData.satelites,
+      observaciones: formData.observaciones,
+      datos: formData // Guardamos copia completa por seguridad
     };
 
     if (!navigator.onLine) {
@@ -200,18 +210,27 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
     }
 
     try {
+      // 1. Guardar registro principal
       const { error } = await supabase.from('revisiones_diarias').upsert([payload], { onConflict: 'fecha' });
       if (error) throw error;
+      
+      // 2. Procesar datos para analíticas automáticamente
+      await processChecklistData(formData, formData.fecha);
       
       localStorage.removeItem('draftin_pending_revision');
       setPendingSync(false);
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => setSuccess(false), 3000);
+      
+      // No reseteamos success inmediatamente para que el usuario pueda descargar el informe
+      setTimeout(() => setSuccess(false), 8000);
+      
       if (refreshData) refreshData();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error al guardar. Se ha guardado una copia local de seguridad.');
+      console.error('Error detallado Supabase:', error);
+      const errorMsg = error.message || error.details || 'Error desconocido';
+      const errorCode = error.code || 'SIN_CODIGO';
+      alert(`ERROR AL GUARDAR (${errorCode}): ${errorMsg}\n\nSi el error es "42703", significa que faltan columnas en tu tabla. Ejecuta el SQL que te pasé.`);
       localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
       setPendingSync(true);
     } finally {
@@ -316,7 +335,17 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
                <span className="text-[8px] font-bold text-red-400">SE SUBIRÁ AL RECUPERAR INTERNET</span>
              </div>
            )}
-           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
+           {success && (
+             <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white p-4 rounded-2xl shadow-2xl z-50 animate-bounce flex flex-col items-center gap-2 border border-white/20 backdrop-blur-md">
+               <span className="text-[11px] font-black uppercase tracking-widest">SINC_EXITOSA_OK</span>
+               <button 
+                 onClick={() => generateChecklistReport({ ...formData, datos: formData }, branding)}
+                 className="bg-white text-black text-[9px] font-black px-4 py-2 rounded-xl hover:bg-primary transition-all flex items-center gap-2"
+               >
+                 <FileText size={14} /> DESCARGAR INFORME PDF
+               </button>
+             </div>
+           )}
            
            <Header title="0. INFORMACIÓN GENERAL" color="text-white" />
            <div className="grid grid-cols-2 gap-4 mb-10">
