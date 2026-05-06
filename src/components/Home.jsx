@@ -9,11 +9,29 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, A
 const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [chartReady, setChartReady] = useState(false);
+  const [gasData, setGasData] = useState([]);
+  const [waterData, setWaterData] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setChartReady(true), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function loadTrends() {
+      try {
+        const { getOperationalTrends } = await import('../services/dataService');
+        const [gas, water] = await Promise.all([
+          getOperationalTrends('TELEMETRÍA'), // Esto filtrará por tipo en datos_operativos
+          getOperationalTrends('TELEMETRÍA')
+        ]);
+        
+        // Formatear para las gráficas (Gas vs Agua se separan por la variable)
+        setGasData(gas.map(d => ({ h: d.fecha, v: d['Caldera 1'] || d['Caldera 2'] || 0 })));
+        setWaterData(water.map(d => ({ h: d.fecha, v: d['Intercambiador A'] || d['Intercambiador B'] || 0 })));
+      } catch (e) {
+        console.error("Error cargando tendencias:", e);
+      } finally {
+        setChartReady(true);
+      }
+    }
+    loadTrends();
+  }, [refreshData]);
 
   const safeOrdenes = Array.isArray(ordenes) ? ordenes : [];
   const safePlan = Array.isArray(planMantenimiento) ? planMantenimiento : [];
@@ -303,10 +321,7 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
             <div className="w-full h-[140px] -ml-4">
               {chartReady && (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
-                  <AreaChart data={[
-                    {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                    {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-                  ]}>
+                  <AreaChart data={gasData.length > 0 ? gasData : [{h:'--',v:0}]}>
                     <defs>
                       <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
@@ -359,10 +374,7 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
             <div className="w-full h-[140px] -ml-4">
               {chartReady && (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
-                  <AreaChart data={[
-                    {h:'00:00',v:0},{h:'04:00',v:0},{h:'08:00',v:0},{h:'12:00',v:0},
-                    {h:'16:00',v:0},{h:'20:00',v:0},{h:'24:00',v:0}
-                  ]}>
+                  <AreaChart data={waterData.length > 0 ? waterData : [{h:'--',v:0}]}>
                     <defs>
                       <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
