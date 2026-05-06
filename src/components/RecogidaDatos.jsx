@@ -364,7 +364,7 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
                  <Field label="Temp Vapor (°C)" value={formData.calderas[c].tv} onChange={v => handleUpdate('calderas', c, 'tv', v)} max={195} />
                  <Field label="Quemador %" value={formData.calderas[c].qp} onChange={v => handleUpdate('calderas', c, 'qp', v)} />
                  <Field label="Llama %" value={formData.calderas[c].llp} onChange={v => handleUpdate('calderas', c, 'llp', v)} />
-                 <Field label="Conductividad" value={formData.calderas[c].cond} onChange={v => handleUpdate('calderas', c, 'cond', v)} max={5000} />
+                 <Field label="Conductividad (µS/cm)" value={formData.calderas[c].cond} onChange={v => handleUpdate('calderas', c, 'cond', v)} max={5000} />
                  <Field label="Horas Func." value={formData.calderas[c].hf} onChange={v => handleUpdate('calderas', c, 'hf', v)} />
                  <Field label="Gas Antes" value={formData.calderas[c].ga} onChange={v => handleUpdate('calderas', c, 'ga', v)} />
                  <Field label="Gas Después" value={formData.calderas[c].gd} onChange={v => handleUpdate('calderas', c, 'gd', v)} />
@@ -373,19 +373,19 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
            ))}
 
            <Header title="2. DESGASIFICADOR" color="text-[#00A3FF]" id="section-desgasificador" />
-           <div className="grid grid-cols-3 gap-3">
-             <Field label="Nivel %" value={formData.desgasificador.nivel} onChange={v => handleSimpleUpdate('desgasificador', 'nivel', v)} />
-             <Field label="Temp °C" value={formData.desgasificador.temp} onChange={v => handleSimpleUpdate('desgasificador', 'temp', v)} />
-             <Field label="Presión bar" value={formData.desgasificador.presion} onChange={v => handleSimpleUpdate('desgasificador', 'presion', v)} />
-           </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Nivel %" value={formData.desgasificador.nivel} onChange={v => handleSimpleUpdate('desgasificador', 'nivel', v)} />
+              <Field label="Temp (°C)" value={formData.desgasificador.temp} onChange={v => handleSimpleUpdate('desgasificador', 'temp', v)} />
+              <Field label="Presión (bar)" value={formData.desgasificador.presion} onChange={v => handleSimpleUpdate('desgasificador', 'presion', v)} />
+            </div>
 
            <Header title="3. INTERCAMBIADORES" color="text-[#FFB800]" id="section-intercambiadores" />
            {['a', 'b', 'c', 'e'].map(l => (
              <div key={l} className="mb-8 border-l border-[#222] pl-4">
                <Sub title={`INTERCAMB. ${l.toUpperCase()}`} />
                <div className="grid grid-cols-2 gap-4">
-                 <Field label="Presión Serv." value={formData.intercambiadores[l].ps} onChange={v => handleUpdate('intercambiadores', l, 'ps', v)} />
-                 <Field label="Temp Serv." value={formData.intercambiadores[l].ts} onChange={v => handleUpdate('intercambiadores', l, 'ts', v)} />
+                 <Field label="Presión Serv. (bar)" value={formData.intercambiadores[l].ps} onChange={v => handleUpdate('intercambiadores', l, 'ps', v)} />
+                 <Field label="Temp Serv. (°C)" value={formData.intercambiadores[l].ts} onChange={v => handleUpdate('intercambiadores', l, 'ts', v)} />
                  <Field label="Agua Antes" value={formData.intercambiadores[l].aa} onChange={v => handleUpdate('intercambiadores', l, 'aa', v)} />
                  <Field label="Agua Después" value={formData.intercambiadores[l].ad} onChange={v => handleUpdate('intercambiadores', l, 'ad', v)} />
                </div>
@@ -397,9 +397,9 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
              <div key={p} className="mb-6 border-b border-[#111] pb-4">
                <Sub title={p.toUpperCase()} />
                <div className="grid grid-cols-3 gap-3">
-                 <Field label="DUREZA" value={formData.quimica[p].d} onChange={v => handleUpdate('quimica', p, 'd', v)} max={0} />
+                 <Field label="DUREZA (°fH)" value={formData.quimica[p].d} onChange={v => handleUpdate('quimica', p, 'd', v)} max={0} />
                  <Field label="PH" value={formData.quimica[p].ph} onChange={v => handleUpdate('quimica', p, 'ph', v)} min={7} max={12} />
-                 <Field label="COND." value={formData.quimica[p].c} onChange={v => handleUpdate('quimica', p, 'c', v)} max={6000} />
+                 <Field label="COND. (µS/cm)" value={formData.quimica[p].c} onChange={v => handleUpdate('quimica', p, 'c', v)} max={6000} />
                </div>
              </div>
            ))}
