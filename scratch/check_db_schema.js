@@ -5,14 +5,14 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkMappings() {
-    console.log("Checking clasificacion_datos mappings...");
-    const { data, error } = await supabase.from('clasificacion_datos').select('*');
+async function checkSchema() {
+    console.log("Checking revisiones_diarias columns...");
+    const { data, error } = await supabase.from('revisiones_diarias').select('*').limit(1);
     if (error) {
-        console.error("Error fetching mappings:", error);
+        console.error("Error fetching table:", error);
     } else {
-        console.log("Mappings found:", data);
+        console.log("Columns found:", data.length > 0 ? Object.keys(data[0]) : "No data to infer columns");
     }
 }
 
-checkMappings();
+checkSchema();

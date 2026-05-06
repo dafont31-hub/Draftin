@@ -28,8 +28,8 @@ const Field = ({ label, value, onChange, type = "number", full = false, min, max
   );
 };
 
-const Header = ({ title, color = "text-primary" }) => (
-  <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md py-4 mb-6 border-b border-[#222]">
+const Header = ({ title, color = "text-primary", id }) => (
+  <div id={id} className="sticky top-0 z-10 bg-black/90 backdrop-blur-md py-4 mb-6 border-b border-[#222]">
     <h3 className={`text-[12px] font-black uppercase tracking-[0.2em] ${color}`}>{title}</h3>
   </div>
 );
@@ -40,11 +40,14 @@ const Sub = ({ title }) => (
   </div>
 );
 
-const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
+const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }) => {
   const [activeTab, setActiveTab] = useState('nuevo'); // 'nuevo' o 'historial'
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [history, setHistory] = useState([]);
+
+  const [satelliteSelector, setSatelliteSelector] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -76,13 +79,27 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
       int4: { aa: '', ad: '' }, int5: { aa: '', ad: '' }, int6: { aa: '', ad: '' },
       cal1: { aa: '', ad: '' }, cal2: { aa: '', ad: '' }
     },
+    satelites: {}, 
     bote: { nivel: '' },
     observaciones: ''
   });
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'select' && params.get('section') === 'limpieza') {
+      setSatelliteSelector(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'historial') fetchHistory();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (userName) {
+      setFormData(prev => ({ ...prev, operario: userName }));
+    }
+  }, [userName]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -124,52 +141,182 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.from('revisiones_diarias').upsert([{
-      datos_calderas: formData.calderas,
-      datos_desgasificador: formData.desgasificador,
-      datos_intercambiadores: formData.intercambiadores,
-      datos_quimica: formData.quimica,
-      datos_salmuera: formData.salmuera,
-      datos_descalcificadores: formData.descalcificadores,
-      datos_bote: formData.bote,
-      observaciones: formData.observaciones,
-      fecha: formData.fecha,
-      operario: formData.operario
-    }], { onConflict: 'fecha' });
+  const [pendingSync, setPendingSync] = useState(false);
 
-    if (!error) {
-      await processChecklistData(formData, formData.fecha);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section && activeTab === 'nuevo') {
+      setTimeout(() => {
+        const element = document.getElementById(`section-${section}`);
+        if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const checkPending = localStorage.getItem('draftin_pending_revision');
+    if (checkPending) setPendingSync(true);
+
+    const handleSync = async () => {
+      if (navigator.onLine) {
+        const pending = localStorage.getItem('draftin_pending_revision');
+        if (pending) {
+          try {
+            const data = JSON.parse(pending);
+            const { error } = await supabase.from('revisiones_diarias').upsert([data], { onConflict: 'fecha' });
+            if (!error) {
+              localStorage.removeItem('draftin_pending_revision');
+              setPendingSync(false);
+              if (refreshData) refreshData();
+            }
+          } catch (e) {
+            console.error("Error sincronizando:", e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('online', handleSync);
+    return () => window.removeEventListener('online', handleSync);
+  }, [refreshData]);
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+
+    const payload = { 
+      fecha: formData.fecha, 
+      operario: formData.operario || userName || 'OPERARIO', 
+      datos: formData 
+    };
+
+    if (!navigator.onLine) {
+      localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
+      setPendingSync(true);
+      alert('MODO OFFLINE: Los datos se han guardado localmente y se subirán automáticamente al recuperar la conexión.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('revisiones_diarias').upsert([payload], { onConflict: 'fecha' });
+      if (error) throw error;
+      
+      localStorage.removeItem('draftin_pending_revision');
+      setPendingSync(false);
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(() => setSuccess(false), 3000);
       if (refreshData) refreshData();
-    } else {
-      console.error('Error guardando revisión:', error);
-      alert('ERROR AL GUARDAR: ' + (error.message || 'Error de conexión con la base de datos'));
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar. Se ha guardado una copia local de seguridad.');
+      localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
+      setPendingSync(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="animate-in fade-in duration-500 pb-40 max-w-2xl mx-auto px-4">
+      {/* SELECTOR DE SATÉLITES (MODAL FULLSCREEN) */}
+      {satelliteSelector && (
+        <div className="fixed inset-0 z-[500] bg-black p-6 overflow-y-auto animate-in fade-in zoom-in duration-300">
+          <div className="max-w-xl mx-auto space-y-8 mt-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-white text-[18px] font-black uppercase italic tracking-widest">Identificar Satélite</h2>
+                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest mt-1">Selecciona el equipo para continuar</p>
+              </div>
+              <button 
+                onClick={() => setSatelliteSelector(false)}
+                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="relative">
+              <input 
+                type="text" 
+                autoFocus
+                placeholder="ESCRIBE NÚMERO O CÓDIGO..." 
+                className="w-full bg-[#111] border border-white/10 text-white text-[14px] p-6 rounded-2xl outline-none focus:border-primary font-black uppercase tracking-widest"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pb-20">
+              {(equipos || [])
+                .filter(eq => eq.sistema === 'Limpieza' && eq.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map(eq => (
+                  <button 
+                    key={eq.id}
+                    onClick={() => {
+                      setSatelliteSelector(false);
+                      setFormData(prev => ({
+                        ...prev,
+                        satelites: { 
+                          ...prev.satelites, 
+                          [eq.id]: { 
+                            ok: true, 
+                            obs: '',
+                            p_agua: '',
+                            p_aire: '',
+                            quimico: '',
+                            manguera_ok: true,
+                            v_retencion: true,
+                            filtro: true,
+                            inyector: true,
+                            acoplamientos: true,
+                            selectores: true
+                          } 
+                        }
+                      }));
+                      setTimeout(() => {
+                        document.getElementById('section-limpieza')?.scrollIntoView({ behavior: 'smooth' });
+                      }, 500);
+                    }}
+                    className="p-6 bg-white/[0.03] border border-white/5 rounded-2xl text-left hover:border-primary/50 transition-all group"
+                  >
+                    <p className="text-white text-[12px] font-black uppercase mb-1 group-hover:text-primary">{eq.nombre}</p>
+                    <p className="text-gray-600 text-[8px] font-bold uppercase tracking-widest">{eq.id_tecnico}</p>
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-[18px] font-black text-white tracking-widest uppercase italic">Centro de Datos</h2>
-        <div className="flex bg-[#111] rounded-xl p-1 border border-white/5">
-           <button onClick={() => setActiveTab('nuevo')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'nuevo' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
-             <ClipboardList size={14} /> NUEVO
-           </button>
-           <button onClick={() => setActiveTab('historial')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'historial' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
-             <History size={14} /> HISTORIAL
-           </button>
-        </div>
+        {userRole?.toLowerCase() === 'admin' && (
+          <div className="flex bg-[#111] rounded-xl p-1 border border-white/5">
+            <button onClick={() => setActiveTab('nuevo')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'nuevo' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
+              <ClipboardList size={14} /> NUEVO
+            </button>
+            <button onClick={() => setActiveTab('historial')} className={`px-6 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-2 ${activeTab === 'historial' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}>
+              <History size={14} /> HISTORIAL
+            </button>
+          </div>
+        )}
       </div>
 
       {activeTab === 'nuevo' ? (
         <form onSubmit={handleSubmit} className="animate-in slide-in-from-left-5 duration-300">
-           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00FF88] text-black text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
+           {pendingSync && (
+             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between animate-pulse">
+               <div className="flex items-center gap-3">
+                 <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_#EF4444]"></div>
+                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Revisión pendiente de sincronizar (Modo Offline)</span>
+               </div>
+               <span className="text-[8px] font-bold text-red-400">SE SUBIRÁ AL RECUPERAR INTERNET</span>
+             </div>
+           )}
+           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
            
            <Header title="0. INFORMACIÓN GENERAL" color="text-white" />
            <div className="grid grid-cols-2 gap-4 mb-10">
@@ -177,7 +324,7 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
               <Field label="NOMBRE DEL OPERARIO" type="text" value={formData.operario} onChange={v => handleSimpleUpdate('operario', '', v)} full />
            </div>
 
-           <Header title="1. GENERADORES DE VAPOR" />
+           <Header title="1. GENERADORES DE VAPOR" id="section-calderas" />
            {['c1', 'c2'].map((c, i) => (
              <div key={c} className="mb-12 border-l border-[#222] pl-4">
                <Sub title={`CALDERA ${i + 1}`} />
@@ -196,14 +343,14 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
              </div>
            ))}
 
-           <Header title="2. DESGASIFICADOR" color="text-[#00A3FF]" />
+           <Header title="2. DESGASIFICADOR" color="text-[#00A3FF]" id="section-desgasificador" />
            <div className="grid grid-cols-3 gap-3">
              <Field label="Nivel %" value={formData.desgasificador.nivel} onChange={v => handleSimpleUpdate('desgasificador', 'nivel', v)} />
              <Field label="Temp °C" value={formData.desgasificador.temp} onChange={v => handleSimpleUpdate('desgasificador', 'temp', v)} />
              <Field label="Presión bar" value={formData.desgasificador.presion} onChange={v => handleSimpleUpdate('desgasificador', 'presion', v)} />
            </div>
 
-           <Header title="3. INTERCAMBIADORES" color="text-[#FFB800]" />
+           <Header title="3. INTERCAMBIADORES" color="text-[#FFB800]" id="section-intercambiadores" />
            {['a', 'b', 'c', 'e'].map(l => (
              <div key={l} className="mb-8 border-l border-[#222] pl-4">
                <Sub title={`INTERCAMB. ${l.toUpperCase()}`} />
@@ -228,7 +375,7 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
              </div>
            ))}
 
-           <Header title="5. DESCALCIFICADORES" color="text-[#00FF88]" />
+           <Header title="5. DESCALCIFICADORES" color="text-[#00843D]" id="section-descalcificadores" />
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              {Object.keys(formData.descalcificadores).map(id => (
                <div key={id} className="border-l border-[#222] pl-4">
@@ -242,9 +389,158 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
            </div>
 
            <Header title="6. DEPÓSITOS Y BOTE" color="text-[#FF0088]" />
-           <div className="grid grid-cols-2 gap-4">
+           <div className="grid grid-cols-2 gap-4 mb-10">
              <Field label="Nodriza %" value={formData.salmuera.nodriza} onChange={v => handleSimpleUpdate('salmuera', 'nodriza', v)} />
              <Field label="Bote %" value={formData.bote.nivel} onChange={v => handleSimpleUpdate('bote', 'nivel', v)} />
+           </div>
+
+           <Header title="7. SISTEMAS DE LIMPIEZA" color="text-[#00E0FF]" id="section-limpieza" />
+           <div className="space-y-4 mb-10">
+             {Object.keys(formData.satelites).length === 0 ? (
+               <div className="p-10 text-center border border-dashed border-[#222] rounded-3xl">
+                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
+                   Escanea la etiqueta maestra para añadir satélites a esta revisión
+                 </p>
+               </div>
+             ) : (
+               Object.keys(formData.satelites).map(id => {
+                 const eq = (equipos || []).find(e => e.id === id);
+                 return (
+                    <div key={id} className="p-6 bg-[#0D0D0D] border border-white/5 rounded-3xl flex flex-col gap-6 animate-in slide-in-from-right-3 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-bl-xl">ELPRESS AC 35-B-S</div>
+                      
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h4 className="text-white text-[12px] font-black uppercase tracking-widest">{eq?.nombre || 'Satélite'}</h4>
+                          <p className="text-gray-500 text-[8px] font-bold uppercase mt-1">{eq?.id_tecnico}</p>
+                        </div>
+                        <div className="flex bg-black rounded-xl p-1 border border-white/5">
+                          <button 
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: true } } }))}
+                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${formData.satelites[id].ok ? 'bg-[#00843D] text-white' : 'text-gray-500'}`}
+                          >
+                            CORRECTO
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm('Has marcado ERROR en este satélite. ¿Deseas abrir una Orden de Trabajo para repararlo?')) {
+                                window.location.href = `/?tab=ordenes&new=true&eq_id=${id}&title=ERROR EN REVISIÓN: ${eq?.nombre}`;
+                              }
+                              setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: false } } }));
+                            }}
+                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${!formData.satelites[id].ok ? 'bg-red-600 text-white' : 'text-gray-500'}`}
+                          >
+                            ERROR
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Agua (Bar)</label>
+                          <input 
+                            type="number" 
+                            step="0.1"
+                            value={formData.satelites[id].p_agua || ''} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_agua: e.target.value } } }))}
+                            placeholder="20-25"
+                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Aire (Bar)</label>
+                          <input 
+                            type="number" 
+                            step="0.1"
+                            value={formData.satelites[id].p_aire || ''} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_aire: e.target.value } } }))}
+                            placeholder="4-6"
+                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Químico (%)</label>
+                          <input 
+                            type="number" 
+                            step="0.1"
+                            value={formData.satelites[id].quimico || ''} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], quimico: e.target.value } } }))}
+                            placeholder="1-5"
+                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[8px] font-black text-primary uppercase tracking-widest italic">Checklist Puntos Críticos (Manual AC 35-B-S)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {[
+                            { id: 'v_retencion', label: 'Válv. Retención' },
+                            { id: 'filtro', label: 'Filtro Agua' },
+                            { id: 'inyector', label: 'Inyector' },
+                            { id: 'acoplamientos', label: 'Acoplamientos' },
+                            { id: 'selectores', label: 'Selectores' }
+                          ].map(item => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ 
+                                ...prev, 
+                                satelites: { 
+                                  ...prev.satelites, 
+                                  [id]: { 
+                                    ...prev.satelites[id], 
+                                    [item.id]: !prev.satelites[id][item.id] 
+                                  } 
+                                } 
+                              }))}
+                              className={`py-2 px-1 rounded-lg border text-[7px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                                formData.satelites[id][item.id] 
+                                ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,224,255,0.1)]' 
+                                : 'bg-black border-white/5 text-gray-700'
+                              }`}
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full ${formData.satelites[id][item.id] ? 'bg-primary animate-pulse' : 'bg-gray-800'}`}></div>
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Estado Manguera/Boquilla</label>
+                          <div className="flex gap-2">
+                            <button 
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: true } } }))}
+                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok ? 'bg-primary/20 border-primary text-primary' : 'bg-black border-[#222] text-gray-600'}`}
+                            >
+                              BUEN ESTADO
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: false } } }))}
+                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok === false ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black border-[#222] text-gray-600'}`}
+                            >
+                              DAÑADA
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <textarea 
+                        placeholder="OBSERVACIONES TÉCNICAS (FUGAS, BLOQUEOS...)"
+                        className="w-full bg-black border border-white/5 text-white p-3 rounded-xl text-[10px] outline-none focus:border-primary min-h-[60px]"
+                        value={formData.satelites[id].obs}
+                        onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], obs: e.target.value } } }))}
+                      />
+                    </div>
+                 );
+               })
+             )}
            </div>
 
            <div className="mt-10">
@@ -263,12 +559,31 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
       ) : (
         <div className="space-y-4 animate-in slide-in-from-right-5 duration-300">
            {loading ? <div className="py-20 text-center text-gray-500 animate-pulse font-black uppercase text-[10px]">Cargando...</div> :
-            history.map(record => (
-              <div key={record.fecha} className="industrial-card p-5 bg-[#0D0D0D] border-white/5 flex items-center justify-between group hover:border-primary/40 transition-all">
-                <div className="flex items-center gap-5">
-                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20"><Calendar size={20} /></div>
-                   <div><h4 className="text-white text-[14px] font-black italic">{record.fecha}</h4><p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">SISTEMA DRAFTIN CORE</p></div>
-                </div>
+            history.map(record => {
+              const rawDatos = record.datos;
+              const statusData = typeof rawDatos === 'string' ? JSON.parse(rawDatos) : (rawDatos || {});
+              const satData = statusData.satelites || {};
+              const satIds = Object.keys(satData);
+              const hasErrors = satIds.some(id => !satData[id].ok);
+
+              return (
+                <div key={record.fecha} className="industrial-card p-5 bg-[#0D0D0D] border-white/5 flex items-center justify-between group hover:border-primary/40 transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20"><Calendar size={20} /></div>
+                    <div>
+                      <h4 className="text-white text-[14px] font-black italic">{record.fecha}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[9px] text-primary font-black uppercase tracking-widest">{record.operario || 'SISTEMA'}</p>
+                        <span className="text-[9px] text-white/20">•</span>
+                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">DRAFTIN CORE</p>
+                        {satIds.length > 0 && (
+                          <div className={`px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter ${hasErrors ? 'bg-red-500 text-white animate-pulse' : 'bg-[#00843D]/20 text-[#00843D]'}`}>
+                            {satIds.length} SATÉLITES {hasErrors ? '• AVERÍA' : '• OK'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                  <div className="flex items-center gap-2">
                     <button 
                       onClick={() => generateChecklistReport(record, branding)}
@@ -277,18 +592,19 @@ const RecogidaDatos = ({ t, refreshData, userName, branding }) => {
                     >
                       <FileText size={18} />
                     </button>
-                    <button 
-                      onClick={() => handleDeleteRecord(record.fecha)} 
-                      className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                      title="Eliminar Registro"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {userRole?.toLowerCase() === 'admin' && (
+                      <button 
+                        onClick={() => handleDeleteRecord(record.fecha)} 
+                        className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                        title="Eliminar Registro"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                  </div>
               </div>
-            ))
-           }
-        </div>
+            ); })}
+         </div>
       )}
     </div>
   );

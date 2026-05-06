@@ -4,6 +4,186 @@ import { generateOrderReport } from '../services/reportService';
 import { Activity, Bell, AlertTriangle } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
+const LatestRevisionStatus = ({ t }) => {
+  const [lastRevision, setLastRevision] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLast() {
+      try {
+        const { data, error } = await supabase
+          .from('revisiones_diarias')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (data && data[0]) setLastRevision(data[0]);
+      } catch (err) {
+        console.error("Error cargando última revisión:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLast();
+  }, []);
+
+  if (loading || !lastRevision) return (
+    <div className="mb-8 p-4 bg-white/[0.02] border border-dashed border-white/5 rounded-2xl flex items-center justify-center">
+      <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Esperando primera recogida de datos...</span>
+    </div>
+  );
+
+  let statusData = {};
+  try {
+    statusData = typeof lastRevision.datos === 'string' ? JSON.parse(lastRevision.datos) : (lastRevision.datos || {});
+  } catch (e) {
+    statusData = {};
+  }
+
+  const caldera1 = statusData?.calderas?.G1 || {};
+  const suave1 = statusData?.quimica?.['Suavizador 1'] || {};
+
+  return (
+    <div className="mb-8 p-4 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-all">
+      <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+        <Activity size={40} />
+      </div>
+      
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#00843D] shadow-[0_0_10px_#00843D]"></div>
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Sincronización Planta (Última: {lastRevision.fecha})</h4>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="space-y-1">
+          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Presión Caldera 1</p>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-2xl font-black tracking-tighter ${parseFloat(caldera1.pt) > 11 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+              {caldera1.pt || '--'}
+            </span>
+            <span className="text-[9px] font-bold text-white/20 uppercase">Bar</span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Temp. Vapor</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black tracking-tighter text-white">
+              {caldera1.tv || '--'}
+            </span>
+            <span className="text-[9px] font-bold text-white/20 uppercase">°C</span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Dureza Suav. 1</p>
+          <div className="flex items-center gap-2">
+            <span className={`text-2xl font-black tracking-tighter ${parseFloat(suave1.d) > 0 ? 'text-red-500 animate-pulse' : 'text-[#00843D]'}`}>
+              {suave1.d || '0'}
+            </span>
+            <span className="text-[9px] font-bold text-white/20 uppercase">ºF</span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Operario</p>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="text-sm font-black text-white/80 uppercase truncate">
+              {lastRevision.operario || 'SISTEMA'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SatelliteStatusSummary = () => {
+  const [stats, setStats] = useState({ total: 60, ok: 0, error: 0, lastCheck: '--', errors: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase.from('revisiones_diarias').select('*').eq('fecha', today);
+      
+      let okCount = 0;
+      let errorCount = 0;
+      let errorList = [];
+
+      if (data) {
+        data.forEach(rev => {
+          const rawDatos = rev.datos;
+          const statusData = typeof rawDatos === 'string' ? JSON.parse(rawDatos) : (rawDatos || {});
+          const satData = statusData.satelites || {};
+          
+          Object.keys(satData).forEach(id => {
+            if (satData[id].ok) okCount++;
+            else {
+              errorCount++;
+              errorList.push({ id, obs: satData[id].obs });
+            }
+          });
+        });
+      }
+
+      setStats({ 
+        total: 60, 
+        ok: okCount, 
+        error: errorCount, 
+        lastCheck: data?.length > 0 ? today : '--',
+        errors: errorList
+      });
+      setLoading(false);
+    }
+    fetchStats();
+  }, []);
+
+  return (
+    <div className="mb-8 p-6 bg-gradient-to-br from-[#0A0A0A] to-[#111] border border-white/5 rounded-3xl relative overflow-hidden">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-white">Sistemas de Limpieza</h4>
+          <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1">Control de Satélites Elpress AC 35-B-S</p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+          <div className={`w-1.5 h-1.5 rounded-full ${stats.lastCheck !== '--' ? 'bg-[#00843D] animate-pulse' : 'bg-gray-700'}`}></div>
+          <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hoy: {stats.lastCheck}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+          <p className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-1">Total Flota</p>
+          <div className="text-xl font-black text-white">60</div>
+        </div>
+        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+          <p className="text-[7px] font-black text-[#00843D] uppercase tracking-widest mb-1">Revisados OK</p>
+          <div className="text-xl font-black text-[#00843D]">{stats.ok}</div>
+        </div>
+        <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-center">
+          <p className="text-[7px] font-black text-red-500 uppercase tracking-widest mb-1">Alertas Hoy</p>
+          <div className="text-xl font-black text-red-500">{stats.error}</div>
+        </div>
+      </div>
+
+      {stats.errors.length > 0 && (
+        <div className="mt-6 space-y-2">
+          <p className="text-[8px] font-black text-red-500/60 uppercase tracking-widest ml-1">Detectados en Planta:</p>
+          <div className="flex flex-wrap gap-2">
+            {stats.errors.map((err, i) => (
+              <div key={i} className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 animate-pulse">
+                <AlertTriangle size={10} className="text-red-500" />
+                <span className="text-[9px] font-black text-white uppercase tracking-tight">Satélite {err.id.split('-').pop()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [chartReady, setChartReady] = useState(false);
@@ -112,10 +292,10 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
       {/* STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: 0, color: 'text-white' },
-          { label: t('en_progreso') || 'En Proceso', val: 0, color: 'text-primary' },
-          { label: t('urgentes') || 'Urgentes', val: 0, color: 'text-red-500' },
-          { label: t('completado') || 'Finalizadas', val: 0, color: 'text-[#00FF88]' }
+          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: safeOrdenes.filter(o => o.estado !== 'Finalizada').length, color: 'text-white' },
+          { label: t('en_progreso') || 'En Proceso', val: safeOrdenes.filter(o => o.estado === 'En Progreso').length, color: 'text-primary' },
+          { label: t('urgentes') || 'Urgentes', val: safeOrdenes.filter(o => o.prioridad === 'Urgente' && o.estado !== 'Finalizada').length, color: 'text-red-500' },
+          { label: t('completado') || 'Finalizadas', val: safeOrdenes.filter(o => o.estado === 'Finalizada').length, color: 'text-[#00843D]' }
         ].map((s, i) => (
           <div key={i} className="flex flex-col gap-0.5 border-l border-white/5 pl-3">
              <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em]">{s.label}</span>
@@ -123,6 +303,10 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
           </div>
         ))}
       </div>
+
+      {/* GEMELO DIGITAL - ÚLTIMA LECTURA */}
+      <LatestRevisionStatus t={t} />
+      <SatelliteStatusSummary />
 
       <div className="flex flex-col lg:flex-row gap-10">
         <div className="flex-1 min-w-0 space-y-6">

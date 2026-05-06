@@ -5,14 +5,13 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkMappings() {
-    console.log("Checking clasificacion_datos mappings...");
-    const { data, error } = await supabase.from('clasificacion_datos').select('*');
+async function checkProfiles() {
+    const { data, error } = await supabase.from('perfiles').select('email, rol, nombre').limit(5);
     if (error) {
-        console.error("Error fetching mappings:", error);
+        console.error("Error fetching profiles:", error);
     } else {
-        console.log("Mappings found:", data);
+        console.log("Profiles found:", data);
     }
 }
 
-checkMappings();
+checkProfiles();

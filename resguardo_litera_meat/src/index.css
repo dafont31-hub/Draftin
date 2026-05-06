@@ -43,3 +43,53 @@ body {
 /* Scrollbar Oculto */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ESTILOS DE IMPRESIÓN PARA ETIQUETAS QR */
+@media print {
+  /* Ocultar todo lo que no sea el área de impresión */
+  body > * {
+    display: none !important;
+  }
+  #root > * {
+    display: none !important;
+  }
+  #root #printable-area {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  #printable-area, #printable-area * {
+    visibility: visible !important;
+    display: block !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .qr-print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 40px !important;
+    padding: 40px !important;
+  }
+
+  .qr-card-print {
+    border: 2px dashed #000 !important;
+    padding: 30px !important;
+    text-align: center !important;
+    background: white !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .qr-card-print img {
+    width: 200px !important;
+    height: 200px !important;
+    margin: 0 auto !important;
+  }
+}

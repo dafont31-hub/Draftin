@@ -24,6 +24,17 @@ const WorkOrders = ({ equipos = [], ordenes = [], planMantenimiento = [], refres
   const fileInputAntes = useRef(null);
   const fileInputDespues = useRef(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === 'true') {
+      const eqId = params.get('eq_id');
+      setView('new');
+      if (eqId) {
+        setNewOrder(prev => ({ ...prev, equipo_id: eqId }));
+      }
+    }
+  }, [equipos]);
+
   const [newOrder, setNewOrder] = useState({
     equipo_id: equipos[0]?.id || '',
     titulo: '',

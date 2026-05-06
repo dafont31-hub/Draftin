@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-const BibliotecaDocs = () => {
+const BibliotecaDocs = ({ userRole }) => {
   // Versión 2.1 - Bypass de caché forzado
   const [documentos, setDocumentos] = useState([]);
   const [filtro, setFiltro] = useState('Todos');
@@ -140,22 +140,26 @@ const BibliotecaDocs = () => {
 
         {/* Filtros y Sincronización */}
         <div className="flex flex-wrap items-center gap-3">
-          <input 
-            type="file" 
-            id="doc-upload" 
-            className="hidden" 
-            onChange={handleUpload}
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg"
-          />
-          <label 
-            htmlFor="doc-upload"
-            className="px-5 py-3 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(var(--primary-color-rgb),0.3)] flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-            </svg>
-            Subir Documento
-          </label>
+          {userRole?.toLowerCase() === 'admin' && (
+            <>
+              <input 
+                type="file" 
+                id="doc-upload" 
+                className="hidden" 
+                onChange={handleUpload}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg"
+              />
+              <label 
+                htmlFor="doc-upload"
+                className="px-5 py-3 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(var(--primary-color-rgb),0.3)] flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                </svg>
+                Subir Documento
+              </label>
+            </>
+          )}
 
           <div className="flex bg-[#111] p-1 rounded-xl border border-[#222]">
             {categorias.map(cat => (

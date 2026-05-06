@@ -11,6 +11,7 @@ import GestionUsuarios from './components/GestionUsuarios'
 import Configuracion from './components/Configuracion'
 import AIChat from './components/AIChat'
 import BibliotecaDocs from './components/BibliotecaDocs'
+import ScanLanding from './components/ScanLanding'
 import { fetchCoreData } from './services/dataService'
 import { Activity, Layout, Settings, Database, Cpu, FileText, BarChart2, Shield, MessageSquare, AlertTriangle, Droplet, LogOut, LayoutDashboard, ClipboardList, Zap, BarChart3, Users, Sliders, Library, Bot, Package, FileJson, HardDrive, FileEdit } from 'lucide-react'
 import { translations } from './translations'
@@ -18,6 +19,15 @@ import { translations } from './translations'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // DESBLOQUEO DE EMERGENCIA (TIMEOUT DE CARGA)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [userRole, setUserRole] = useState(null)
   const [userName, setUserName] = useState('')
   const [activeTab, setActiveTab] = useState('inicio')
@@ -49,6 +59,12 @@ function App() {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
@@ -90,6 +106,11 @@ function App() {
         }
         setUserRole(data.rol.toLowerCase()); 
         setUserName(data.nombre); 
+        
+        // Si es operario, aterrizar directamente en Recogida de Datos
+        if (data.rol.toLowerCase() === 'operario') {
+          setActiveTab('recogida');
+        }
       }
     } catch (e) { 
       console.error("Error en fetchUserRole:", e);
@@ -134,9 +155,10 @@ function App() {
       } else if (nav && nav.length === 0) {
         console.warn("No hay pestañas activas. Restaurando valores por defecto...");
         const defaults = [
-          { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin', 'operario'], activo: true },
+          { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin'], activo: true },
           { label: 'TAREAS', icon: 'tool', tab_id: 'ordenes', orden: 2, roles: ['admin', 'operario'], activo: true },
           { label: 'DATOS', icon: 'edit', tab_id: 'recogida', orden: 3, roles: ['admin', 'operario'], activo: true },
+          { label: 'MANUALES', icon: 'library', tab_id: 'documentacion', orden: 4, roles: ['admin', 'operario'], activo: true },
           { label: 'CONFIG', icon: 'configuracion', tab_id: 'configuracion', orden: 10, roles: ['admin'], activo: true }
         ];
         for (const t of defaults) {
@@ -179,17 +201,19 @@ function App() {
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-[10px] font-black uppercase tracking-widest animate-pulse text-primary font-mono">SYSTEM_SYNCING...</div>
 
   const renderContent = () => {
+    const params = new URLSearchParams(window.location.search);
     switch (activeTab) {
       case 'inicio': case 'dashboard': return <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} groups={appConfigGrupos} refreshData={fetchData} />;
       case 'ordenes': case 'tareas': return <WorkOrders t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
-      case 'recogida': case 'datos': return <RecogidaDatos t={t} refreshData={fetchData} userName={userName} branding={branding} />;
+      case 'recogida': case 'datos': return <RecogidaDatos t={t} refreshData={fetchData} userName={userName} userRole={userRole} branding={branding} equipos={equipos} />;
+      case 'scan': return <ScanLanding t={t} setActiveTab={setActiveTab} eqId={params.get('eq_id')} equipos={equipos} />;
       case 'consumo': case 'consumos': return <Consumos t={t} />;
       case 'analiticas': return <Analiticas t={t} />;
       case 'equipos': return <Equipos t={t} equipos={equipos} categories={appConfigGrupos} />;
       case 'usuarios': return <GestionUsuarios t={t} />;
-      case 'configuracion': case 'config': return <Configuracion t={t} setActiveTab={setActiveTab} />;
+      case 'configuracion': case 'config': return <Configuracion t={t} setActiveTab={setActiveTab} equipos={equipos} />;
       case 'ai_chat': case 'ai': case 'cerebro': return <AIChat t={t} />;
-      case 'documentacion': case 'docs': return <BibliotecaDocs t={t} />;
+      case 'documentacion': case 'docs': return <BibliotecaDocs t={t} userRole={userRole} />;
       default: return <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
     }
   }
@@ -260,9 +284,9 @@ function App() {
               <div className="relative group">
                 <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <h1 className="relative text-[12px] xs:text-[16px] md:text-[20px] font-black uppercase tracking-[0.1em] xs:tracking-[0.2em] md:tracking-[0.3em] italic text-white flex items-center gap-2 md:gap-3">
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.2)]">DRAFTIN</span>
+                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.2)]">LITERA MEAT</span>
                   <span className="hidden xs:inline text-gray-400 font-light not-italic">|</span>
-                  <span className="hidden sm:inline tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 drop-shadow-md">THERMAL MASTER</span>
+                  <span className="hidden sm:inline tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 drop-shadow-md">GESTIÓN TÉRMICA</span>
                 </h1>
               </div>
             </div>

@@ -229,6 +229,42 @@ export const generateChecklistReport = (record, branding = {}) => {
         descData, [0, 255, 136]);
     }
 
+    // 4. SISTEMAS DE LIMPIEZA (SATÉLITES AC 35-B-S)
+    const rawDatos = record.datos;
+    const statusData = typeof rawDatos === 'string' ? JSON.parse(rawDatos) : (rawDatos || {});
+    const satelites = statusData.satelites || {};
+    
+    if (Object.keys(satelites).length > 0) {
+      const satData = Object.entries(satelites).map(([id, d]) => {
+        const checklist = [
+          d.v_retencion ? 'V' : 'X',
+          d.filtro ? 'V' : 'X',
+          d.inyector ? 'V' : 'X',
+          d.acoplamientos ? 'V' : 'X',
+          d.selectores ? 'V' : 'X'
+        ].join('/');
+
+        return [
+          id.toUpperCase().split('-').pop(),
+          d.ok ? 'OK' : 'ERROR',
+          d.p_agua || '--',
+          d.p_aire || '--',
+          d.quimico || '--',
+          d.manguera_ok ? 'CORRECTA' : 'DAÑADA',
+          checklist,
+          d.obs || '--'
+        ];
+      });
+
+      addSectionTable("4. SISTEMAS DE LIMPIEZA (SATÉLITES)", 
+        ["SAT", "ESTADO", "P. AGUA", "P. AIRE", "CONC %", "MANGUERA", "CHKLST*", "OBSERVACIONES"], 
+        satData, [0, 224, 255]);
+        
+      doc.setFontSize(6);
+      doc.setTextColor(150);
+      doc.text("*CHKLST: V.Ret / Filtro / Inyec / Acopl / Selec (V=Correcto / X=Fallo)", 15, currentY - 8);
+    }
+
     // Observaciones
     if (record.observaciones) {
       if (currentY > 250) { doc.addPage(); currentY = 20; }
