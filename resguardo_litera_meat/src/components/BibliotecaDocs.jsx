@@ -13,16 +13,16 @@ const BibliotecaDocs = ({ userRole }) => {
   }, []);
 
   const DOCUMENTOS_RESPALDO = [
-    { id: 1, titulo: 'Manual de Uso Caldera 2671', filename: '2671_Manuale d\'uso.pdf', categoria: 'Manual Técnico' },
-    { id: 2, titulo: 'Manual General Generador Cap A (ESP)', filename: 'CAP A - rev_2.0 p - GENERALE (SPA).pdf', categoria: 'Manual Técnico' },
-    { id: 3, titulo: 'Registro Inspección Caldera G1', filename: 'INSPECCION C G1.pdf', categoria: 'Inspección' },
-    { id: 4, titulo: 'Registro Inspección Caldera G2', filename: 'INSPECCION C G2.pdf', categoria: 'Inspección' },
-    { id: 5, titulo: 'Fichas Técnicas Recambios Intercambiadores', filename: 'INTERCAMBIADORES PIEZAS DE RECAMBIOS FICHAS TECNICAS.pdf', categoria: 'Ficha Técnica' },
-    { id: 6, titulo: 'Manual Satélites Limpieza AC 35-B-S', filename: 'Manual AC 35-B-S (18706735-83801030) SATELITES DE LIMPIZA.pdf', categoria: 'Manual Técnico' },
-    { id: 7, titulo: 'Guía Rápida Grupo Presión ZPR45', filename: 'Manual Guia Rpida ZPR45 GRUPO PRESION SATELITES DE LIMPIEZA.pdf', categoria: 'Manual Técnico' },
-    { id: 8, titulo: 'Manual Satélites Lavadero Camiones SU 0127', filename: 'SU 0127 Ultra Next Baseline SATELITES LAVADERO DE CAMIONES.pdf', categoria: 'Manual Técnico' },
-    { id: 9, titulo: 'Inspección B - Generador de Vapor 1', filename: 'generador de vapor 1 inspeccion B.pdf', categoria: 'Inspección' },
-    { id: 10, titulo: 'Inspección B - Generador de Vapor 2', filename: 'generador de vapor 2 inspeccion B.pdf', categoria: 'Inspección' }
+    { id: 1, titulo: 'Manual de Uso Caldera 2671', filename: 'manual_caldera_2671.pdf', categoria: 'Manual Técnico' },
+    { id: 2, titulo: 'Manual General Generador Cap A (ESP)', filename: 'manual_generador_cap_a.pdf', categoria: 'Manual Técnico' },
+    { id: 3, titulo: 'Registro Inspección Caldera G1', filename: 'inspeccion_c_g1.pdf', categoria: 'Inspección' },
+    { id: 4, titulo: 'Registro Inspección Caldera G2', filename: 'inspeccion_c_g2.pdf', categoria: 'Inspección' },
+    { id: 5, titulo: 'Fichas Técnicas Recambios Intercambiadores', filename: 'fichas_intercambiadores.pdf', categoria: 'Ficha Técnica' },
+    { id: 6, titulo: 'Manual Satélites Limpieza AC 35-B-S', filename: 'manual_satelites_limpieza.pdf', categoria: 'Manual Técnico' },
+    { id: 7, titulo: 'Guía Rápida Grupo Presión ZPR45', filename: 'manual_grupo_presion_zpr45.pdf', categoria: 'Manual Técnico' },
+    { id: 8, titulo: 'Manual Satélites Lavadero Camiones SU 0127', filename: 'manual_lavadero_camiones.pdf', categoria: 'Manual Técnico' },
+    { id: 9, titulo: 'Inspección B - Generador de Vapor 1', filename: 'inspeccion_b_g1.pdf', categoria: 'Inspección' },
+    { id: 10, titulo: 'Inspección B - Generador de Vapor 2', filename: 'inspeccion_b_g2.pdf', categoria: 'Inspección' }
   ];
 
   async function fetchDocumentos() {
@@ -225,8 +225,7 @@ const BibliotecaDocs = ({ userRole }) => {
                 
                 <button 
                   onClick={() => {
-                    const encodedFilename = encodeURI(doc.filename);
-                    const url = `${window.location.origin}/documentos/${encodedFilename}`;
+                    const url = `/documentos/${encodeURIComponent(doc.filename)}`;
                     window.open(url, '_blank');
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] border border-[#333] text-white text-[9px] font-black uppercase rounded-lg hover:bg-primary hover:text-black transition-all"

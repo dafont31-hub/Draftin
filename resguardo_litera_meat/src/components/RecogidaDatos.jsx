@@ -155,25 +155,19 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
   }, [activeTab]);
 
   useEffect(() => {
-    const checkPending = localStorage.getItem('draftin_pending_revision');
-    if (checkPending) setPendingSync(true);
-
-    const handleSync = async () => {
+    const pending = localStorage.getItem('draftin_pending_revision');
+    if (pending) {
+      setPendingSync(true);
+      // Intentar sincronizar automáticamente si ya estamos online al cargar
       if (navigator.onLine) {
-        const pending = localStorage.getItem('draftin_pending_revision');
-        if (pending) {
-          try {
-            const data = JSON.parse(pending);
-            const { error } = await supabase.from('revisiones_diarias').upsert([data], { onConflict: 'fecha' });
-            if (!error) {
-              localStorage.removeItem('draftin_pending_revision');
-              setPendingSync(false);
-              if (refreshData) refreshData();
-            }
-          } catch (e) {
-            console.error("Error sincronizando:", e);
-          }
-        }
+        console.log("Detectada revisión pendiente y conexión activa. Sincronizando...");
+        handleSubmit();
+      }
+    }
+
+    const handleSync = () => {
+      if (navigator.onLine && localStorage.getItem('draftin_pending_revision')) {
+        handleSubmit();
       }
     };
 
@@ -185,10 +179,20 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
     if (e) e.preventDefault();
     setLoading(true);
 
+    // Mapeo detallado para coincidir con el esquema de la DB
     const payload = { 
       fecha: formData.fecha, 
       operario: formData.operario || userName || 'OPERARIO', 
-      datos: formData 
+      datos_calderas: formData.calderas,
+      datos_desgasificador: formData.desgasificador,
+      datos_intercambiadores: formData.intercambiadores,
+      datos_quimica: formData.quimica,
+      datos_salmuera: formData.salmuera,
+      datos_descalcificadores: formData.descalcificadores,
+      datos_bote: formData.bote,
+      datos_satelites: formData.satelites,
+      observaciones: formData.observaciones,
+      datos: formData // Guardamos copia completa por seguridad
     };
 
     if (!navigator.onLine) {
@@ -200,18 +204,27 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
     }
 
     try {
+      // 1. Guardar registro principal
       const { error } = await supabase.from('revisiones_diarias').upsert([payload], { onConflict: 'fecha' });
       if (error) throw error;
+      
+      // 2. Procesar datos para analíticas automáticamente
+      await processChecklistData(formData, formData.fecha);
       
       localStorage.removeItem('draftin_pending_revision');
       setPendingSync(false);
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => setSuccess(false), 3000);
+      
+      // No reseteamos success inmediatamente para que el usuario pueda descargar el informe
+      setTimeout(() => setSuccess(false), 8000);
+      
       if (refreshData) refreshData();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error al guardar. Se ha guardado una copia local de seguridad.');
+      console.error('Error detallado Supabase:', error);
+      const errorMsg = error.message || error.details || 'Error desconocido';
+      const errorCode = error.code || 'SIN_CODIGO';
+      alert(`ERROR AL GUARDAR (${errorCode}): ${errorMsg}\n\nSi el error es "42703", significa que faltan columnas en tu tabla. Ejecuta el SQL que te pasé.`);
       localStorage.setItem('draftin_pending_revision', JSON.stringify(payload));
       setPendingSync(true);
     } finally {
@@ -308,15 +321,33 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
       {activeTab === 'nuevo' ? (
         <form onSubmit={handleSubmit} className="animate-in slide-in-from-left-5 duration-300">
            {pendingSync && (
-             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between animate-pulse">
-               <div className="flex items-center gap-3">
-                 <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_#EF4444]"></div>
-                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Revisión pendiente de sincronizar (Modo Offline)</span>
-               </div>
-               <span className="text-[8px] font-bold text-red-400">SE SUBIRÁ AL RECUPERAR INTERNET</span>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-8 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+            <div>
+              <p className="text-red-500 text-[10px] font-black uppercase italic tracking-widest">Revisión pendiente de sincronizar</p>
+              <p className="text-red-400/60 text-[9px] uppercase font-bold tracking-widest">Se subirá automáticamente al recuperar internet</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => handleSubmit()}
+            className="bg-red-500 text-white text-[9px] font-black px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors uppercase tracking-widest"
+          >
+            Sincronizar ahora
+          </button>
+        </div>
+      )}
+           {success && (
+             <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white p-4 rounded-2xl shadow-2xl z-50 animate-bounce flex flex-col items-center gap-2 border border-white/20 backdrop-blur-md">
+               <span className="text-[11px] font-black uppercase tracking-widest">SINC_EXITOSA_OK</span>
+               <button 
+                 onClick={() => generateChecklistReport({ ...formData, datos: formData }, branding)}
+                 className="bg-white text-black text-[9px] font-black px-4 py-2 rounded-xl hover:bg-primary transition-all flex items-center gap-2"
+               >
+                 <FileText size={14} /> DESCARGAR INFORME PDF
+               </button>
              </div>
            )}
-           {success && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#00843D] text-white text-[11px] font-black px-8 py-3 rounded-2xl shadow-2xl z-50 animate-bounce">SINC_EXITOSA_OK</div>}
            
            <Header title="0. INFORMACIÓN GENERAL" color="text-white" />
            <div className="grid grid-cols-2 gap-4 mb-10">
@@ -335,7 +366,7 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
                  <Field label="Temp Vapor (°C)" value={formData.calderas[c].tv} onChange={v => handleUpdate('calderas', c, 'tv', v)} max={195} />
                  <Field label="Quemador %" value={formData.calderas[c].qp} onChange={v => handleUpdate('calderas', c, 'qp', v)} />
                  <Field label="Llama %" value={formData.calderas[c].llp} onChange={v => handleUpdate('calderas', c, 'llp', v)} />
-                 <Field label="Conductividad" value={formData.calderas[c].cond} onChange={v => handleUpdate('calderas', c, 'cond', v)} max={5000} />
+                 <Field label="Conductividad (µS/cm)" value={formData.calderas[c].cond} onChange={v => handleUpdate('calderas', c, 'cond', v)} max={5000} />
                  <Field label="Horas Func." value={formData.calderas[c].hf} onChange={v => handleUpdate('calderas', c, 'hf', v)} />
                  <Field label="Gas Antes" value={formData.calderas[c].ga} onChange={v => handleUpdate('calderas', c, 'ga', v)} />
                  <Field label="Gas Después" value={formData.calderas[c].gd} onChange={v => handleUpdate('calderas', c, 'gd', v)} />
@@ -344,19 +375,19 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
            ))}
 
            <Header title="2. DESGASIFICADOR" color="text-[#00A3FF]" id="section-desgasificador" />
-           <div className="grid grid-cols-3 gap-3">
-             <Field label="Nivel %" value={formData.desgasificador.nivel} onChange={v => handleSimpleUpdate('desgasificador', 'nivel', v)} />
-             <Field label="Temp °C" value={formData.desgasificador.temp} onChange={v => handleSimpleUpdate('desgasificador', 'temp', v)} />
-             <Field label="Presión bar" value={formData.desgasificador.presion} onChange={v => handleSimpleUpdate('desgasificador', 'presion', v)} />
-           </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Nivel %" value={formData.desgasificador.nivel} onChange={v => handleSimpleUpdate('desgasificador', 'nivel', v)} />
+              <Field label="Temp (°C)" value={formData.desgasificador.temp} onChange={v => handleSimpleUpdate('desgasificador', 'temp', v)} />
+              <Field label="Presión (bar)" value={formData.desgasificador.presion} onChange={v => handleSimpleUpdate('desgasificador', 'presion', v)} />
+            </div>
 
            <Header title="3. INTERCAMBIADORES" color="text-[#FFB800]" id="section-intercambiadores" />
            {['a', 'b', 'c', 'e'].map(l => (
              <div key={l} className="mb-8 border-l border-[#222] pl-4">
                <Sub title={`INTERCAMB. ${l.toUpperCase()}`} />
                <div className="grid grid-cols-2 gap-4">
-                 <Field label="Presión Serv." value={formData.intercambiadores[l].ps} onChange={v => handleUpdate('intercambiadores', l, 'ps', v)} />
-                 <Field label="Temp Serv." value={formData.intercambiadores[l].ts} onChange={v => handleUpdate('intercambiadores', l, 'ts', v)} />
+                 <Field label="Presión Serv. (bar)" value={formData.intercambiadores[l].ps} onChange={v => handleUpdate('intercambiadores', l, 'ps', v)} />
+                 <Field label="Temp Serv. (°C)" value={formData.intercambiadores[l].ts} onChange={v => handleUpdate('intercambiadores', l, 'ts', v)} />
                  <Field label="Agua Antes" value={formData.intercambiadores[l].aa} onChange={v => handleUpdate('intercambiadores', l, 'aa', v)} />
                  <Field label="Agua Después" value={formData.intercambiadores[l].ad} onChange={v => handleUpdate('intercambiadores', l, 'ad', v)} />
                </div>
@@ -368,9 +399,9 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
              <div key={p} className="mb-6 border-b border-[#111] pb-4">
                <Sub title={p.toUpperCase()} />
                <div className="grid grid-cols-3 gap-3">
-                 <Field label="DUREZA" value={formData.quimica[p].d} onChange={v => handleUpdate('quimica', p, 'd', v)} max={0} />
+                 <Field label="DUREZA (°fH)" value={formData.quimica[p].d} onChange={v => handleUpdate('quimica', p, 'd', v)} max={0} />
                  <Field label="PH" value={formData.quimica[p].ph} onChange={v => handleUpdate('quimica', p, 'ph', v)} min={7} max={12} />
-                 <Field label="COND." value={formData.quimica[p].c} onChange={v => handleUpdate('quimica', p, 'c', v)} max={6000} />
+                 <Field label="COND. (µS/cm)" value={formData.quimica[p].c} onChange={v => handleUpdate('quimica', p, 'c', v)} max={6000} />
                </div>
              </div>
            ))}
@@ -396,150 +427,144 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
 
            <Header title="7. SISTEMAS DE LIMPIEZA" color="text-[#00E0FF]" id="section-limpieza" />
            <div className="space-y-4 mb-10">
-             {Object.keys(formData.satelites).length === 0 ? (
-               <div className="p-10 text-center border border-dashed border-[#222] rounded-3xl">
-                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
-                   Escanea la etiqueta maestra para añadir satélites a esta revisión
-                 </p>
-               </div>
-             ) : (
-               Object.keys(formData.satelites).map(id => {
-                 const eq = (equipos || []).find(e => e.id === id);
-                 return (
-                    <div key={id} className="p-6 bg-[#0D0D0D] border border-white/5 rounded-3xl flex flex-col gap-6 animate-in slide-in-from-right-3 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-bl-xl">ELPRESS AC 35-B-S</div>
-                      
-                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                        <div>
-                          <h4 className="text-white text-[12px] font-black uppercase tracking-widest">{eq?.nombre || 'Satélite'}</h4>
-                          <p className="text-gray-500 text-[8px] font-bold uppercase mt-1">{eq?.id_tecnico}</p>
-                        </div>
-                        <div className="flex bg-black rounded-xl p-1 border border-white/5">
-                          <button 
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: true } } }))}
-                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${formData.satelites[id].ok ? 'bg-[#00843D] text-white' : 'text-gray-500'}`}
-                          >
-                            CORRECTO
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              if (window.confirm('Has marcado ERROR en este satélite. ¿Deseas abrir una Orden de Trabajo para repararlo?')) {
-                                window.location.href = `/?tab=ordenes&new=true&eq_id=${id}&title=ERROR EN REVISIÓN: ${eq?.nombre}`;
-                              }
-                              setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: false } } }));
-                            }}
-                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${!formData.satelites[id].ok ? 'bg-red-600 text-white' : 'text-gray-500'}`}
-                          >
-                            ERROR
-                          </button>
-                        </div>
-                      </div>
+             {Object.keys(formData.satelites).length > 0 && (
+                Object.keys(formData.satelites).map(id => {
+                  const eq = (equipos || []).find(e => e.id === id);
+                  return (
+                     <div key={id} className="p-6 bg-[#0D0D0D] border border-white/5 rounded-3xl flex flex-col gap-6 animate-in slide-in-from-right-3 relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-bl-xl">ELPRESS AC 35-B-S</div>
+                       
+                       <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                         <div>
+                           <h4 className="text-white text-[12px] font-black uppercase tracking-widest">{eq?.nombre || 'Satélite'}</h4>
+                           <p className="text-gray-500 text-[8px] font-bold uppercase mt-1">{eq?.id_tecnico}</p>
+                         </div>
+                         <div className="flex bg-black rounded-xl p-1 border border-white/5">
+                           <button 
+                             type="button"
+                             onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: true } } }))}
+                             className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${formData.satelites[id].ok ? 'bg-[#00843D] text-white' : 'text-gray-500'}`}
+                           >
+                             CORRECTO
+                           </button>
+                           <button 
+                             type="button"
+                             onClick={() => {
+                               if (window.confirm('Has marcado ERROR en este satélite. ¿Deseas abrir una Orden de Trabajo para repararlo?')) {
+                                 window.location.href = `/?tab=ordenes&new=true&eq_id=${id}&title=ERROR EN REVISIÓN: ${eq?.nombre}`;
+                               }
+                               setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: false } } }));
+                             }}
+                             className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${!formData.satelites[id].ok ? 'bg-red-600 text-white' : 'text-gray-500'}`}
+                           >
+                             ERROR
+                           </button>
+                         </div>
+                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Agua (Bar)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].p_agua || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_agua: e.target.value } } }))}
-                            placeholder="20-25"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Aire (Bar)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].p_aire || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_aire: e.target.value } } }))}
-                            placeholder="4-6"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Químico (%)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].quimico || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], quimico: e.target.value } } }))}
-                            placeholder="1-5"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                      </div>
+                       <div className="grid grid-cols-3 gap-3">
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Agua (Bar)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].p_agua || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_agua: e.target.value } } }))}
+                             placeholder="20-25"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Aire (Bar)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].p_aire || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_aire: e.target.value } } }))}
+                             placeholder="4-6"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Químico (%)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].quimico || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], quimico: e.target.value } } }))}
+                             placeholder="1-5"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                       </div>
 
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[8px] font-black text-primary uppercase tracking-widest italic">Checklist Puntos Críticos (Manual AC 35-B-S)</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {[
-                            { id: 'v_retencion', label: 'Válv. Retención' },
-                            { id: 'filtro', label: 'Filtro Agua' },
-                            { id: 'inyector', label: 'Inyector' },
-                            { id: 'acoplamientos', label: 'Acoplamientos' },
-                            { id: 'selectores', label: 'Selectores' }
-                          ].map(item => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => setFormData(prev => ({ 
-                                ...prev, 
-                                satelites: { 
-                                  ...prev.satelites, 
-                                  [id]: { 
-                                    ...prev.satelites[id], 
-                                    [item.id]: !prev.satelites[id][item.id] 
-                                  } 
-                                } 
-                              }))}
-                              className={`py-2 px-1 rounded-lg border text-[7px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
-                                formData.satelites[id][item.id] 
-                                ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,224,255,0.1)]' 
-                                : 'bg-black border-white/5 text-gray-700'
-                              }`}
-                            >
-                              <div className={`w-1.5 h-1.5 rounded-full ${formData.satelites[id][item.id] ? 'bg-primary animate-pulse' : 'bg-gray-800'}`}></div>
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                       <div className="flex flex-col gap-1.5">
+                         <label className="text-[8px] font-black text-primary uppercase tracking-widest italic">Checklist Puntos Críticos (Manual AC 35-B-S)</label>
+                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                           {[
+                             { id: 'v_retencion', label: 'Válv. Retención' },
+                             { id: 'filtro', label: 'Filtro Agua' },
+                             { id: 'inyector', label: 'Inyector' },
+                             { id: 'acoplamientos', label: 'Acoplamientos' },
+                             { id: 'selectores', label: 'Selectores' }
+                           ].map(item => (
+                             <button
+                               key={item.id}
+                               type="button"
+                               onClick={() => setFormData(prev => ({ 
+                                 ...prev, 
+                                 satelites: { 
+                                   ...prev.satelites, 
+                                   [id]: { 
+                                     ...prev.satelites[id], 
+                                     [item.id]: !prev.satelites[id][item.id] 
+                                   } 
+                                 } 
+                               }))}
+                               className={`py-2 px-1 rounded-lg border text-[7px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                                 formData.satelites[id][item.id] 
+                                 ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,224,255,0.1)]' 
+                                 : 'bg-black border-white/5 text-gray-700'
+                               }`}
+                             >
+                               <div className={`w-1.5 h-1.5 rounded-full ${formData.satelites[id][item.id] ? 'bg-primary animate-pulse' : 'bg-gray-800'}`}></div>
+                               {item.label}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1 flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Estado Manguera/Boquilla</label>
-                          <div className="flex gap-2">
-                            <button 
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: true } } }))}
-                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok ? 'bg-primary/20 border-primary text-primary' : 'bg-black border-[#222] text-gray-600'}`}
-                            >
-                              BUEN ESTADO
-                            </button>
-                            <button 
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: false } } }))}
-                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok === false ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black border-[#222] text-gray-600'}`}
-                            >
-                              DAÑADA
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                       <div className="flex items-center gap-4">
+                         <div className="flex-1 flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Estado Manguera/Boquilla</label>
+                           <div className="flex gap-2">
+                             <button 
+                               type="button"
+                               onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: true } } }))}
+                               className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok ? 'bg-primary/20 border-primary text-primary' : 'bg-black border-[#222] text-gray-600'}`}
+                             >
+                               BUEN ESTADO
+                             </button>
+                             <button 
+                               type="button"
+                               onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: false } } }))}
+                               className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok === false ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black border-[#222] text-gray-600'}`}
+                             >
+                               DAÑADA
+                             </button>
+                           </div>
+                         </div>
+                       </div>
 
-                      <textarea 
-                        placeholder="OBSERVACIONES TÉCNICAS (FUGAS, BLOQUEOS...)"
-                        className="w-full bg-black border border-white/5 text-white p-3 rounded-xl text-[10px] outline-none focus:border-primary min-h-[60px]"
-                        value={formData.satelites[id].obs}
-                        onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], obs: e.target.value } } }))}
-                      />
-                    </div>
-                 );
-               })
+                       <textarea 
+                         placeholder="OBSERVACIONES TÉCNICAS (FUGAS, BLOQUEOS...)"
+                         className="w-full bg-black border border-white/5 text-white p-3 rounded-xl text-[10px] outline-none focus:border-primary min-h-[60px]"
+                         value={formData.satelites[id].obs}
+                         onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], obs: e.target.value } } }))}
+                       />
+                     </div>
+                  );
+                })
              )}
            </div>
 

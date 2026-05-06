@@ -143,66 +143,84 @@ export const generateBulkReport = (ordenes = [], equipos = []) => {
 export const generateChecklistReport = (record, branding = {}) => {
   try {
     const doc = new jsPDF();
-    const empresa = (branding.empresa_nombre || 'litera meat').toLowerCase();
-    const primaryColor = '#C1001B'; // Rojo real
-    const secondaryColor = '#00843D'; // Verde real
+    const empresa = (branding.empresa_nombre || 'LITERA MEAT').toUpperCase();
+    const primaryColor = branding.color_primario || '#C1001B';
+    const secondaryColor = branding.color_secundario || '#00843D';
     
-    // Header Industrial v2
-    doc.setFillColor(255, 255, 255); // Fondo blanco para que resalten los colores
-    doc.rect(0, 0, 210, 45, 'F');
-    doc.setDrawColor(secondaryColor);
-    doc.setLineWidth(1.5);
-    doc.line(15, 40, 195, 40); // Línea verde de acento
+    // --- CABECERA INDUSTRIAL MODERNA ---
+    doc.setFillColor(15, 15, 15);
+    doc.rect(0, 0, 210, 40, 'F');
     
-    doc.setTextColor(primaryColor);
-    doc.setFontSize(28);
+    // Logo / Nombre Empresa
+    doc.setTextColor(255);
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text(empresa, 15, 28);
+    doc.text(empresa, 15, 25);
     
-    doc.setTextColor(100);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("Pini Group | Sistema de Gestión Térmica", 15, 35);
+    doc.setTextColor(150);
+    doc.text("SISTEMA DE GESTIÓN TÉRMICA INDUSTRIAL | DRAFTIN HMI", 15, 32);
     
-    doc.setTextColor(primaryColor);
-    doc.text(`REGISTRO TÉCNICO DIARIO - ${record.fecha}`, 140, 25);
-    doc.setTextColor(0);
-    doc.text(`OPERARIO: ${record.operario || 'SISTEMA'}`, 140, 33);
-    
+    // Bloque de datos derecha
+    doc.setFillColor(40, 40, 40);
+    doc.rect(130, 0, 80, 40, 'F');
     doc.setTextColor(255);
     doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("REGISTRO TÉCNICO", 140, 15);
     doc.setFont("helvetica", "normal");
-    doc.text("SISTEMA DE GESTIÓN TÉRMICA INDUSTRIAL", 15, 33);
-    doc.text(`REGISTRO TÉCNICO DIARIO - ${record.fecha}`, 140, 25);
-    doc.text(`OPERARIO: ${record.operario || 'SISTEMA'}`, 140, 33);
+    doc.setFontSize(8);
+    doc.text(`FECHA: ${record.fecha}`, 140, 23);
+    doc.text(`OPERARIO: ${record.operario || 'SISTEMA'}`, 140, 28);
+    doc.text(`ESTADO: VALIDADO`, 140, 33);
 
-    let currentY = 55;
+    let currentY = 50;
 
-    // Función auxiliar para tablas
-    const addSectionTable = (title, headers, data, color = [40, 40, 40]) => {
+    // Función auxiliar para tablas con estilo industrial
+    const addSectionTable = (title, headers, data, accentColor = [193, 0, 27]) => {
+      // Título de sección con barra lateral
+      doc.setFillColor(...accentColor);
+      doc.rect(15, currentY - 4, 2, 6, 'F');
+      
       doc.setTextColor(0);
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text(title, 15, currentY);
+      doc.text(title, 20, currentY + 1);
       
       autoTable(doc, {
-        startY: currentY + 3,
+        startY: currentY + 4,
         head: [headers],
         body: data,
         theme: 'grid',
-        headStyles: { fillColor: color, textColor: 255, fontSize: 8, halign: 'center' },
-        bodyStyles: { fontSize: 7, halign: 'center' },
-        margin: { left: 15, right: 15 }
+        headStyles: { 
+          fillColor: [30, 30, 30], 
+          textColor: 255, 
+          fontSize: 8, 
+          halign: 'center',
+          fontStyle: 'bold'
+        },
+        bodyStyles: { 
+          fontSize: 7, 
+          halign: 'center',
+          textColor: 50
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 250]
+        },
+        margin: { left: 15, right: 15 },
+        styles: { cellPadding: 2 }
       });
       
       // @ts-ignore
-      currentY = doc.lastAutoTable.finalY + 12;
+      currentY = doc.lastAutoTable.finalY + 15;
     };
 
     // 1. GENERADORES DE VAPOR
-    if (record.datos_calderas) {
-      const calData = Object.entries(record.datos_calderas).map(([id, d]) => [
-        id.toUpperCase(), d.nv, d.np, d.pt, d.tv, d.cond, d.hf, d.ga
+    const calderas = record.datos_calderas || (record.datos && record.datos.calderas);
+    if (calderas) {
+      const calData = Object.entries(calderas).map(([id, d]) => [
+        id.toUpperCase(), d.nv || '--', d.np || '--', `${d.pt || '--'} bar`, `${d.tv || '--'} °C`, d.cond || '--', d.hf || '--', d.ga || '--'
       ]);
       addSectionTable("1. GENERADORES DE VAPOR (CALDERAS)", 
         ["CAL", "NIVEL V.", "NIVEL %", "PRES.", "TEMP.", "COND.", "HORAS", "GAS"], 
@@ -210,84 +228,86 @@ export const generateChecklistReport = (record, branding = {}) => {
     }
 
     // 2. CONTROL QUÍMICO
-    if (record.datos_quimica) {
-      const chemData = Object.entries(record.datos_quimica).map(([id, d]) => [
-        id.toUpperCase(), d.d, d.ph, d.c
+    const quimica = record.datos_quimica || (record.datos && record.datos.quimica);
+    if (quimica) {
+      const chemData = Object.entries(quimica).map(([id, d]) => [
+        id.toUpperCase().replace('DUP', 'DÚPLEX ').replace('TRI', 'TRÍPLEX '), d.d || '--', d.ph || '--', d.c || '--'
       ]);
       addSectionTable("2. ANÁLISIS QUÍMICO DEL AGUA", 
-        ["PUNTO", "DUREZA", "PH", "CONDUCTIVIDAD"], 
+        ["PUNTO DE MUESTREO", "DUREZA (°fH)", "PH", "CONDUCTIVIDAD (µS/cm)"], 
         chemData, [0, 163, 255]);
     }
 
-    // 3. DESCALCIFICADORES E INTERCAMBIADORES
-    if (record.datos_descalcificadores) {
-      const descData = Object.entries(record.datos_descalcificadores).map(([id, d]) => [
-        id.toUpperCase(), d.aa, d.ad
+    // 3. EQUIPOS DE TRATAMIENTO
+    const descalcificadores = record.datos_descalcificadores || (record.datos && record.datos.descalcificadores);
+    if (descalcificadores) {
+      const descData = Object.entries(descalcificadores).map(([id, d]) => [
+        id.toUpperCase(), d.aa || '--', d.ad || '--'
       ]);
       addSectionTable("3. EQUIPOS DE TRATAMIENTO (DESCALCIFICADORES)", 
-        ["EQUIPO", "AGUA ANTES", "AGUA DESPUÉS"], 
-        descData, [0, 255, 136]);
+        ["EQUIPO", "CONTADOR ANTES", "CONTADOR DESPUÉS"], 
+        descData, [0, 132, 61]);
     }
 
-    // 4. SISTEMAS DE LIMPIEZA (SATÉLITES AC 35-B-S)
+    // 4. SISTEMAS DE LIMPIEZA
     const rawDatos = record.datos;
     const statusData = typeof rawDatos === 'string' ? JSON.parse(rawDatos) : (rawDatos || {});
-    const satelites = statusData.satelites || {};
+    const satelites = record.datos_satelites || statusData.satelites || {};
     
     if (Object.keys(satelites).length > 0) {
       const satData = Object.entries(satelites).map(([id, d]) => {
         const checklist = [
-          d.v_retencion ? 'V' : 'X',
-          d.filtro ? 'V' : 'X',
-          d.inyector ? 'V' : 'X',
-          d.acoplamientos ? 'V' : 'X',
-          d.selectores ? 'V' : 'X'
-        ].join('/');
+          d.v_retencion ? 'OK' : 'FAIL',
+          d.filtro ? 'OK' : 'FAIL',
+          d.inyector ? 'OK' : 'FAIL'
+        ].join(' | ');
 
         return [
           id.toUpperCase().split('-').pop(),
-          d.ok ? 'OK' : 'ERROR',
+          d.ok ? 'CORRECTO' : 'AVERÍA',
           d.p_agua || '--',
           d.p_aire || '--',
           d.quimico || '--',
-          d.manguera_ok ? 'CORRECTA' : 'DAÑADA',
+          d.manguera_ok ? 'OK' : 'DAÑADA',
           checklist,
           d.obs || '--'
         ];
       });
 
       addSectionTable("4. SISTEMAS DE LIMPIEZA (SATÉLITES)", 
-        ["SAT", "ESTADO", "P. AGUA", "P. AIRE", "CONC %", "MANGUERA", "CHKLST*", "OBSERVACIONES"], 
+        ["ID", "ESTADO", "P. AGUA", "P. AIRE", "% CONC", "MANG.", "CHECKLIST", "OBSERVACIONES"], 
         satData, [0, 224, 255]);
-        
-      doc.setFontSize(6);
-      doc.setTextColor(150);
-      doc.text("*CHKLST: V.Ret / Filtro / Inyec / Acopl / Selec (V=Correcto / X=Fallo)", 15, currentY - 8);
     }
 
-    // Observaciones
+    // Observaciones finales
     if (record.observaciones) {
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
+      if (currentY > 240) { doc.addPage(); currentY = 20; }
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, currentY, 180, 30, 'F');
+      
       doc.setTextColor(0);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("OBSERVACIONES E INCIDENCIAS:", 15, currentY);
-      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      const splitObs = doc.splitTextToSize(record.observaciones, 180);
-      doc.text(splitObs, 15, currentY + 6);
-      currentY += (splitObs.length * 5) + 10;
+      doc.setFont("helvetica", "bold");
+      doc.text("OBSERVACIONES E INCIDENCIAS DEL TURNO:", 20, currentY + 8);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80);
+      const splitObs = doc.splitTextToSize(record.observaciones, 170);
+      doc.text(splitObs, 20, currentY + 15);
     }
 
-    // Pie de página con validez técnica
-    doc.setDrawColor(200);
-    doc.line(15, 275, 195, 275);
-    doc.setTextColor(150);
-    doc.setFontSize(7);
-    doc.text("Este documento es un registro digital generado por la plataforma DRAFTIN. Posee validez técnica para auditorías internas.", 105, 282, { align: "center" });
-    doc.text("CALDERAS | INTERCAMBIADORES | QUÍMICA | CONSUMOS", 105, 286, { align: "center" });
+    // --- PIE DE PÁGINA ---
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(230);
+      doc.line(15, 280, 195, 280);
+      doc.setTextColor(150);
+      doc.setFontSize(7);
+      doc.text(`DRAFTIN HMI INDUSTRIAL - DOCUMENTO TÉCNICO GENERADO AUTOMÁTICAMENTE - PÁGINA ${i} DE ${pageCount}`, 105, 285, { align: "center" });
+    }
 
-    doc.save(`INSPECCION_DIARIA_${record.fecha}_${record.operario || 'OPERARIO'}.pdf`);
+    doc.save(`INSPECCION_${record.fecha}_${empresa}.pdf`);
   } catch (err) {
     console.error("Error reporte checklist:", err);
     alert("ERROR AL GENERAR REPORTE: " + err.message);
