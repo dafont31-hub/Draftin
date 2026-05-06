@@ -1,0 +1,6 @@
+name = "draftin"
+compatibility_date = "2024-04-03"
+pages_build_output_dir = "dist"
+
+[vars]
+# Variables de entorno si fueran necesarias
