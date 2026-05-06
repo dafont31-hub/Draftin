@@ -427,150 +427,144 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
 
            <Header title="7. SISTEMAS DE LIMPIEZA" color="text-[#00E0FF]" id="section-limpieza" />
            <div className="space-y-4 mb-10">
-             {Object.keys(formData.satelites).length === 0 ? (
-               <div className="p-10 text-center border border-dashed border-[#222] rounded-3xl">
-                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
-                   Escanea la etiqueta maestra para añadir satélites a esta revisión
-                 </p>
-               </div>
-             ) : (
-               Object.keys(formData.satelites).map(id => {
-                 const eq = (equipos || []).find(e => e.id === id);
-                 return (
-                    <div key={id} className="p-6 bg-[#0D0D0D] border border-white/5 rounded-3xl flex flex-col gap-6 animate-in slide-in-from-right-3 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-bl-xl">ELPRESS AC 35-B-S</div>
-                      
-                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                        <div>
-                          <h4 className="text-white text-[12px] font-black uppercase tracking-widest">{eq?.nombre || 'Satélite'}</h4>
-                          <p className="text-gray-500 text-[8px] font-bold uppercase mt-1">{eq?.id_tecnico}</p>
-                        </div>
-                        <div className="flex bg-black rounded-xl p-1 border border-white/5">
-                          <button 
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: true } } }))}
-                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${formData.satelites[id].ok ? 'bg-[#00843D] text-white' : 'text-gray-500'}`}
-                          >
-                            CORRECTO
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              if (window.confirm('Has marcado ERROR en este satélite. ¿Deseas abrir una Orden de Trabajo para repararlo?')) {
-                                window.location.href = `/?tab=ordenes&new=true&eq_id=${id}&title=ERROR EN REVISIÓN: ${eq?.nombre}`;
-                              }
-                              setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: false } } }));
-                            }}
-                            className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${!formData.satelites[id].ok ? 'bg-red-600 text-white' : 'text-gray-500'}`}
-                          >
-                            ERROR
-                          </button>
-                        </div>
-                      </div>
+             {Object.keys(formData.satelites).length > 0 && (
+                Object.keys(formData.satelites).map(id => {
+                  const eq = (equipos || []).find(e => e.id === id);
+                  return (
+                     <div key={id} className="p-6 bg-[#0D0D0D] border border-white/5 rounded-3xl flex flex-col gap-6 animate-in slide-in-from-right-3 relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-bl-xl">ELPRESS AC 35-B-S</div>
+                       
+                       <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                         <div>
+                           <h4 className="text-white text-[12px] font-black uppercase tracking-widest">{eq?.nombre || 'Satélite'}</h4>
+                           <p className="text-gray-500 text-[8px] font-bold uppercase mt-1">{eq?.id_tecnico}</p>
+                         </div>
+                         <div className="flex bg-black rounded-xl p-1 border border-white/5">
+                           <button 
+                             type="button"
+                             onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: true } } }))}
+                             className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${formData.satelites[id].ok ? 'bg-[#00843D] text-white' : 'text-gray-500'}`}
+                           >
+                             CORRECTO
+                           </button>
+                           <button 
+                             type="button"
+                             onClick={() => {
+                               if (window.confirm('Has marcado ERROR en este satélite. ¿Deseas abrir una Orden de Trabajo para repararlo?')) {
+                                 window.location.href = `/?tab=ordenes&new=true&eq_id=${id}&title=ERROR EN REVISIÓN: ${eq?.nombre}`;
+                               }
+                               setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], ok: false } } }));
+                             }}
+                             className={`px-4 py-2 text-[8px] font-black uppercase rounded-lg ${!formData.satelites[id].ok ? 'bg-red-600 text-white' : 'text-gray-500'}`}
+                           >
+                             ERROR
+                           </button>
+                         </div>
+                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Agua (Bar)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].p_agua || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_agua: e.target.value } } }))}
-                            placeholder="20-25"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Aire (Bar)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].p_aire || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_aire: e.target.value } } }))}
-                            placeholder="4-6"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Químico (%)</label>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={formData.satelites[id].quimico || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], quimico: e.target.value } } }))}
-                            placeholder="1-5"
-                            className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
-                          />
-                        </div>
-                      </div>
+                       <div className="grid grid-cols-3 gap-3">
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Agua (Bar)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].p_agua || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_agua: e.target.value } } }))}
+                             placeholder="20-25"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Presión Aire (Bar)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].p_aire || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], p_aire: e.target.value } } }))}
+                             placeholder="4-6"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Químico (%)</label>
+                           <input 
+                             type="number" 
+                             step="0.1"
+                             value={formData.satelites[id].quimico || ''} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], quimico: e.target.value } } }))}
+                             placeholder="1-5"
+                             className="w-full bg-black border border-[#222] text-white p-3 rounded-xl text-[12px] outline-none focus:border-primary"
+                           />
+                         </div>
+                       </div>
 
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[8px] font-black text-primary uppercase tracking-widest italic">Checklist Puntos Críticos (Manual AC 35-B-S)</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {[
-                            { id: 'v_retencion', label: 'Válv. Retención' },
-                            { id: 'filtro', label: 'Filtro Agua' },
-                            { id: 'inyector', label: 'Inyector' },
-                            { id: 'acoplamientos', label: 'Acoplamientos' },
-                            { id: 'selectores', label: 'Selectores' }
-                          ].map(item => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => setFormData(prev => ({ 
-                                ...prev, 
-                                satelites: { 
-                                  ...prev.satelites, 
-                                  [id]: { 
-                                    ...prev.satelites[id], 
-                                    [item.id]: !prev.satelites[id][item.id] 
-                                  } 
-                                } 
-                              }))}
-                              className={`py-2 px-1 rounded-lg border text-[7px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
-                                formData.satelites[id][item.id] 
-                                ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,224,255,0.1)]' 
-                                : 'bg-black border-white/5 text-gray-700'
-                              }`}
-                            >
-                              <div className={`w-1.5 h-1.5 rounded-full ${formData.satelites[id][item.id] ? 'bg-primary animate-pulse' : 'bg-gray-800'}`}></div>
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                       <div className="flex flex-col gap-1.5">
+                         <label className="text-[8px] font-black text-primary uppercase tracking-widest italic">Checklist Puntos Críticos (Manual AC 35-B-S)</label>
+                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                           {[
+                             { id: 'v_retencion', label: 'Válv. Retención' },
+                             { id: 'filtro', label: 'Filtro Agua' },
+                             { id: 'inyector', label: 'Inyector' },
+                             { id: 'acoplamientos', label: 'Acoplamientos' },
+                             { id: 'selectores', label: 'Selectores' }
+                           ].map(item => (
+                             <button
+                               key={item.id}
+                               type="button"
+                               onClick={() => setFormData(prev => ({ 
+                                 ...prev, 
+                                 satelites: { 
+                                   ...prev.satelites, 
+                                   [id]: { 
+                                     ...prev.satelites[id], 
+                                     [item.id]: !prev.satelites[id][item.id] 
+                                   } 
+                                 } 
+                               }))}
+                               className={`py-2 px-1 rounded-lg border text-[7px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                                 formData.satelites[id][item.id] 
+                                 ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,224,255,0.1)]' 
+                                 : 'bg-black border-white/5 text-gray-700'
+                               }`}
+                             >
+                               <div className={`w-1.5 h-1.5 rounded-full ${formData.satelites[id][item.id] ? 'bg-primary animate-pulse' : 'bg-gray-800'}`}></div>
+                               {item.label}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1 flex flex-col gap-1.5">
-                          <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Estado Manguera/Boquilla</label>
-                          <div className="flex gap-2">
-                            <button 
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: true } } }))}
-                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok ? 'bg-primary/20 border-primary text-primary' : 'bg-black border-[#222] text-gray-600'}`}
-                            >
-                              BUEN ESTADO
-                            </button>
-                            <button 
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: false } } }))}
-                              className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok === false ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black border-[#222] text-gray-600'}`}
-                            >
-                              DAÑADA
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                       <div className="flex items-center gap-4">
+                         <div className="flex-1 flex flex-col gap-1.5">
+                           <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Estado Manguera/Boquilla</label>
+                           <div className="flex gap-2">
+                             <button 
+                               type="button"
+                               onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: true } } }))}
+                               className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok ? 'bg-primary/20 border-primary text-primary' : 'bg-black border-[#222] text-gray-600'}`}
+                             >
+                               BUEN ESTADO
+                             </button>
+                             <button 
+                               type="button"
+                               onClick={() => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], manguera_ok: false } } }))}
+                               className={`flex-1 py-2 text-[8px] font-black uppercase rounded-lg border ${formData.satelites[id].manguera_ok === false ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black border-[#222] text-gray-600'}`}
+                             >
+                               DAÑADA
+                             </button>
+                           </div>
+                         </div>
+                       </div>
 
-                      <textarea 
-                        placeholder="OBSERVACIONES TÉCNICAS (FUGAS, BLOQUEOS...)"
-                        className="w-full bg-black border border-white/5 text-white p-3 rounded-xl text-[10px] outline-none focus:border-primary min-h-[60px]"
-                        value={formData.satelites[id].obs}
-                        onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], obs: e.target.value } } }))}
-                      />
-                    </div>
-                 );
-               })
+                       <textarea 
+                         placeholder="OBSERVACIONES TÉCNICAS (FUGAS, BLOQUEOS...)"
+                         className="w-full bg-black border border-white/5 text-white p-3 rounded-xl text-[10px] outline-none focus:border-primary min-h-[60px]"
+                         value={formData.satelites[id].obs}
+                         onChange={(e) => setFormData(prev => ({ ...prev, satelites: { ...prev.satelites, [id]: { ...prev.satelites[id], obs: e.target.value } } }))}
+                       />
+                     </div>
+                  );
+                })
              )}
            </div>
 
