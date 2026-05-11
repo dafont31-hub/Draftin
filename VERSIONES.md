@@ -1,5 +1,12 @@
 # HISTORIAL DE VERSIONES - DRAFTIN
 
+## [v1.7] - 2026-05-11 - AI Supervisor & Neural Fix
+### Añadido
+- **Antigravity Connectivity:** Restauración total del motor de IA con el modelo `gemini-flash-latest`.
+- **Insights Contextuales:** Nueva lógica de prompt que analiza equipos reales (Satélites, Calderas) para dar consejos de campo prácticos.
+- **Neural UI Stability:** Solución al parpadeo (flicker) del Dashboard y gestión de estados de carga de IA.
+- **Resguardo v1.7:** Copia de seguridad completa en `/BACKUPS/RESGUARDO_AI_FIX_2026_05_11`.
+
 ## [v1.6] - 2026-05-04 - Mobile Responsive & Real-Time Telemetry
 ### Añadido
 - **Optimización Mobile-First:** Rediseño total de cabecera y paddings para uso en smartphones sin desbordamiento.
@@ -38,6 +45,7 @@
 
 | Versión | Fecha | Descripción | Estado |
 | :--- | :--- | :--- | :--- |
+| **v1.7** | 11/05/2026 | **AI Supervisor Fix**: Conectividad Gemini flash-latest, consejos contextuales de planta y estabilidad de UI. | ESTABLE |
 | **v1.6** | 04/05/2026 | **Mobile & Telemetry**: Optimización responsive, reloj real y sincronización de inspecciones PDF. | ESTABLE |
 | **v1.5** | 03/05/2026 | **Planning & Automation**: Gestión de inspecciones recurrentes y automatización de fechas. | ARCHIVADA |
 | **v1.4** | 03/05/2026 | **Grid High Density**: Optimización visual y nuevos iconos industriales. | ARCHIVADA |
