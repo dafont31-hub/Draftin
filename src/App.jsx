@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
 import Home from './components/Home'
 import WorkOrders from './components/WorkOrders'
@@ -12,22 +12,34 @@ import Configuracion from './components/Configuracion'
 import AIChat from './components/AIChat'
 import BibliotecaDocs from './components/BibliotecaDocs'
 import ScanLanding from './components/ScanLanding'
+import NotificationsDropdown from './components/NotificationsDropdown'
+import AINeuralCore from './components/AI/AINeuralCore'
 import { fetchCoreData } from './services/dataService'
-import { Activity, Layout, Settings, Database, Cpu, FileText, BarChart2, Shield, MessageSquare, AlertTriangle, Droplet, LogOut, LayoutDashboard, ClipboardList, Zap, BarChart3, Users, Sliders, Library, Bot, Package, FileJson, HardDrive, FileEdit } from 'lucide-react'
+import {
+  LayoutDashboard, ClipboardList, Database, Droplet, BarChart3,
+  Package, Library, Bot, Settings, LogOut, Bell, ChevronDown,
+  Zap, Flame, Wifi, WifiOff, User, X
+} from 'lucide-react'
 import { translations } from './translations'
+
+/* ── Tab icon map ── */
+const TAB_ICONS = {
+  inicio: LayoutDashboard, dashboard: LayoutDashboard,
+  tareas: ClipboardList, ordenes: ClipboardList,
+  recogida: Database, datos: Database,
+  consumo: Droplet, consumos: Droplet,
+  analiticas: BarChart3,
+  equipos: Package,
+  docs: Library, documentacion: Library,
+  ai_chat: Bot, ai: Bot, cerebro: Bot,
+  configuracion: Settings, config: Settings,
+}
+
+const getTabIcon = (tabId) => TAB_ICONS[tabId?.toLowerCase()] || LayoutDashboard
 
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  // DESBLOQUEO DE EMERGENCIA (TIMEOUT DE CARGA)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const [userRole, setUserRole] = useState(null)
   const [userName, setUserName] = useState('')
   const [activeTab, setActiveTab] = useState('inicio')
@@ -35,46 +47,83 @@ function App() {
   const [equipos, setEquipos] = useState([])
   const [ordenes, setOrdenes] = useState([])
   const [planMantenimiento, setPlanMantenimiento] = useState([])
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [appConfigGrupos, setAppConfigGrupos] = useState([])
-  const [branding, setBranding] = useState({ 
-    empresa_nombre: 'litera meat', 
-    color_primario: '#C1001B', 
+  const [branding, setBranding] = useState({
+    empresa_nombre: 'DRAFTIN',
+    color_primario: '#FF6B00',
     color_secundario: '#00843D',
-    logo_url: null, 
-    idioma: localStorage.getItem('draftin_lang') || 'es' 
+    logo_url: null,
+    idioma: localStorage.getItem('draftin_lang') || 'es'
   })
-  const [uiConfig, setUiConfig] = useState({ border_radius: '1.5rem', glass_opacity: '0.1', card_bg: '#111' })
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  
-  const t = (key) => {
-    const lang = branding.idioma || localStorage.getItem('draftin_lang') || 'es';
-    return translations[lang][key] || key;
-  };
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const userMenuRef = useRef(null)
+  const notificationsRef = useRef(null)
 
+  // Generar notificaciones basadas en datos reales
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab');
-    if (tabParam) {
-      setActiveTab(tabParam);
+    const alerts = [];
+    // 1. OTs sin asignar
+    const unassigned = ordenes.filter(o => !o.tecnico_id && o.estado !== 'Cerrada');
+    if (unassigned.length > 0) {
+      alerts.push({
+        type: 'warning',
+        title: 'OTs por asignar',
+        message: `Hay ${unassigned.length} Órdenes de Trabajo esperando técnico responsable.`,
+        time: 'AHORA'
+      });
     }
+    // 2. Mantenimientos legales próximos
+    const criticalLegal = planMantenimiento.filter(p => {
+      const days = Math.ceil((new Date(p.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24));
+      return days >= 0 && days <= 15;
+    });
+    criticalLegal.forEach(p => {
+      alerts.push({
+        type: 'critical',
+        title: 'Inspección Legal Próxima',
+        message: `${p.tarea} para el equipo ${p.equipo_id}. Plazo crítico.`,
+        time: 'PRÓXIMAMENTE'
+      });
+    });
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    setNotifications(alerts);
+  }, [ordenes, planMantenimiento]);
 
+  /* ── Clock ── */
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  /* ── Online status ── */
+  useEffect(() => {
+    const handler = () => setIsOnline(navigator.onLine)
+    window.addEventListener('online', handler)
+    window.addEventListener('offline', handler)
+    return () => { window.removeEventListener('online', handler); window.removeEventListener('offline', handler) }
+  }, [])
+
+  /* ── Click outside user menu & notifications ── */
+  useEffect(() => {
+    const handler = (e) => { 
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false)
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) setShowNotifications(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  /* ── i18n ── */
+  const t = (key) => {
+    const lang = branding.idioma || localStorage.getItem('draftin_lang') || 'es'
+    return translations[lang]?.[key] || key
+  }
+
+  /* ── Auth ── */
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
@@ -84,7 +133,7 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
       if (s) fetchUserRole(s)
-      else { setUserRole(null); setLoading(false); }
+      else { setUserRole(null); setLoading(false) }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -92,363 +141,382 @@ function App() {
   async function fetchUserRole(s) {
     try {
       const { data, error } = await supabase.from('perfiles').select('rol, nombre').eq('email', s.user.email).single()
-      if (error) {
-        console.warn("No se encontró perfil para este usuario, usando valores por defecto.");
-        setUserRole('operario');
-        setUserName(s.user.email.split('@')[0]);
-        return;
+      if (!error && data) {
+        setUserRole(data.rol.toLowerCase())
+        setUserName(data.nombre)
+        if (data.rol.toLowerCase() === 'operario') setActiveTab('recogida')
       }
-      if (data) { 
-        if (data.estado === 'inactivo') {
-          alert('SU ACCESO HA SIDO DESACTIVADO POR EL ADMINISTRADOR.');
-          await supabase.auth.signOut();
-          return;
-        }
-        setUserRole(data.rol.toLowerCase()); 
-        setUserName(data.nombre); 
-        
-        // Si es operario, aterrizar directamente en Recogida de Datos
-        if (data.rol.toLowerCase() === 'operario') {
-          setActiveTab('recogida');
-        }
-      }
-    } catch (e) { 
-      console.error("Error en fetchUserRole:", e);
-      setUserRole('operario');
-    }
+    } catch (e) { console.error(e) }
     setLoading(false)
   }
 
-  const handleLogout = async () => {
-    if (window.confirm(t('cerrar_sesion'))) {
-      await supabase.auth.signOut();
-    }
-  };
-
   useEffect(() => {
-    if (session) {
-      fetchSaaSConfig(); fetchData();
-      const channel = supabase.channel('saas_sync')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_pestanas' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_branding' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_grupos' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_pestanas' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_branding' }, () => fetchSaaSConfig())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config_grupos' }, () => fetchSaaSConfig())
-        .subscribe()
-      return () => supabase.removeChannel(channel)
-    }
+    if (session) { fetchSaaSConfig(); fetchData() }
   }, [session])
 
   async function fetchSaaSConfig() {
-    try {
-      // Cargamos configuraciones en paralelo para mayor velocidad
-      const [navRes, brandRes, groupRes] = await Promise.all([
-        supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden'),
-        supabase.from('app_config_branding').select('*').maybeSingle(),
-        supabase.from('app_config_grupos').select('*').order('orden')
-      ]);
-
-      if (navRes.error) console.warn("Error cargando pestañas:", navRes.error);
-      if (brandRes.error) console.warn("Error cargando branding:", brandRes.error);
-      if (groupRes.error) console.warn("Error cargando grupos:", groupRes.error);
-
-      // Pestañas (Nav)
-      if (navRes.data && navRes.data.length > 0) {
-        setNavItems(navRes.data);
-      } else {
-        console.warn("No hay pestañas activas. Restaurando valores por defecto...");
-        const defaults = [
-          { label: 'DASHBOARD', icon: 'home', tab_id: 'inicio', orden: 1, roles: ['admin'], activo: true },
-          { label: 'TAREAS', icon: 'tool', tab_id: 'ordenes', orden: 2, roles: ['admin', 'operario'], activo: true },
-          { label: 'DATOS', icon: 'edit', tab_id: 'recogida', orden: 3, roles: ['admin', 'operario'], activo: true },
-          { label: 'MANUALES', icon: 'library', tab_id: 'documentacion', orden: 4, roles: ['admin', 'operario'], activo: true },
-          { label: 'CONFIG', icon: 'configuracion', tab_id: 'configuracion', orden: 10, roles: ['admin'], activo: true }
-        ];
-        setNavItems(defaults);
-      }
-      
-      // Grupos
-      if (groupRes.data) setAppConfigGrupos(groupRes.data);
-
-      // Branding
-      if (brandRes.data) {
-        setBranding(brandRes.data);
-        const hex = brandRes.data.color_primario || '#C1001B';
-        document.documentElement.style.setProperty('--primary-color', hex);
-        
-        // Convertir a RGB para transparencias
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        document.documentElement.style.setProperty('--primary-color-rgb', `${r}, ${g}, ${b}`);
-      }
-    } catch (e) {
-      console.error("Error crítico en fetchSaaSConfig:", e);
+    const [navRes, brandRes, groupRes] = await Promise.all([
+      supabase.from('app_config_pestanas').select('*').eq('activo', true).order('orden'),
+      supabase.from('app_config_branding').select('*').maybeSingle(),
+      supabase.from('app_config_grupos').select('*').order('orden')
+    ])
+    if (navRes.data) setNavItems(navRes.data)
+    if (brandRes.data) {
+      setBranding(brandRes.data)
+      document.documentElement.style.setProperty('--primary', brandRes.data.color_primario)
+      document.documentElement.style.setProperty('--primary-color', brandRes.data.color_primario)
     }
+    if (groupRes.data) setAppConfigGrupos(groupRes.data)
   }
 
   async function fetchData() {
-    try {
-      const coreData = await fetchCoreData();
-      
-      setEquipos(coreData.equipos);
-      setOrdenes(coreData.ordenes || []);
-      setPlanMantenimiento(coreData.planMantenimiento);
-    } catch (e) {
-      console.error("Error crítico en fetchData:", e);
-    }
+    const coreData = await fetchCoreData()
+    setEquipos(coreData.equipos)
+    setOrdenes(coreData.ordenes || [])
+    setPlanMantenimiento(coreData.planMantenimiento)
   }
 
-  if (!session) return <Login />
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-[10px] font-black uppercase tracking-widest animate-pulse text-primary font-mono">SYSTEM_SYNCING...</div>
-
-  const renderContent = () => {
-    const params = new URLSearchParams(window.location.search);
-    switch (activeTab) {
-      case 'inicio': case 'dashboard': return <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} groups={appConfigGrupos} refreshData={fetchData} />;
-      case 'ordenes': case 'tareas': return <WorkOrders t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
-      case 'recogida': case 'datos': return <RecogidaDatos t={t} refreshData={fetchData} userName={userName} userRole={userRole} branding={branding} equipos={equipos} />;
-      case 'scan': return <ScanLanding t={t} setActiveTab={setActiveTab} eqId={params.get('eq_id')} equipos={equipos} />;
-      case 'consumo': case 'consumos': return <Consumos t={t} />;
-      case 'analiticas': return <Analiticas t={t} />;
-      case 'equipos': return <Equipos t={t} equipos={equipos} categories={appConfigGrupos} />;
-      case 'usuarios': return <GestionUsuarios t={t} />;
-      case 'configuracion': case 'config': return <Configuracion t={t} setActiveTab={setActiveTab} equipos={equipos} />;
-      case 'ai_chat': case 'ai': case 'cerebro': return <AIChat t={t} />;
-      case 'documentacion': case 'docs': return <BibliotecaDocs t={t} userRole={userRole} />;
-      default: return <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />;
-    }
+  const handleLogout = async () => {
+    if (window.confirm('¿Cerrar sesión?')) await supabase.auth.signOut()
   }
 
   const visibleNavItems = navItems.filter(item => {
-    // La configuración siempre se oculta del sidebar para estar en el gear del header
-    if (['configuracion', 'config'].includes(item.tab_id?.toLowerCase())) return false;
-    
-    // Si no tiene roles definidos, la mostramos a todos
-    if (!item.roles || (Array.isArray(item.roles) && item.roles.length === 0)) return true;
-    
-    // Normalizar roles para comparación
-    const currentRole = userRole?.toLowerCase() || 'admin';
-    const itemRoles = Array.isArray(item.roles) 
-      ? item.roles.map(r => r.toLowerCase()) 
-      : [item.roles?.toString().toLowerCase()];
-      
-    return itemRoles.includes(currentRole);
-  });
+    if (['configuracion', 'config', 'usuarios'].includes(item.tab_id?.toLowerCase())) return false
+    const currentRole = userRole?.toLowerCase() || 'admin'
+    const itemRoles = Array.isArray(item.roles) ? item.roles.map(r => r.toLowerCase()) : []
+    return itemRoles.length === 0 || itemRoles.includes(currentRole)
+  })
 
-  return (
-    <div className="flex h-screen bg-black text-white overflow-hidden font-sans">
-      {/* SIDEBAR */}
-      <div className={`fixed inset-0 z-[200] transition-opacity duration-500 ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={() => setIsMenuOpen(false)}></div>
-        <div className={`absolute left-0 top-0 w-72 h-full bg-[#050505] border-r border-white/5 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-           <div className="p-8 border-b border-white/5 flex items-center gap-5">
-              <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center font-black text-black shadow-[0_0_25px_rgba(var(--primary-color-rgb),0.4)] text-xl italic">{userName ? userName[0].toUpperCase() : 'D'}</div>
-              <div className="flex flex-col"><span className="text-[11px] font-black uppercase tracking-tighter text-white">{userName || 'OPERATOR'}</span><span className="text-[8px] text-primary font-black uppercase tracking-[0.3em]">{userRole}</span></div>
-           </div>
-           <div className="p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar" style={{ height: 'calc(100vh - 180px)' }}>
-              {visibleNavItems.map(item => {
-                const isActive = activeTab === item.tab_id;
-                return (
-                  <button 
-                    key={item.tab_id} 
-                    onClick={() => { setActiveTab(item.tab_id); setIsMenuOpen(false); }} 
-                    className={`flex items-center gap-6 p-2.5 rounded-[24px] transition-all duration-500 group relative ${isActive ? 'bg-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.3)]' : 'hover:bg-white/[0.02]'}`}
-                  >
-                    {/* INDICADOR ACTIVO PREMIUM */}
-                    {isActive && (
-                      <div className="absolute -left-4 w-2 h-10 bg-primary rounded-r-full shadow-[0_0_20px_rgba(255,107,0,0.6)] animate-pulse"></div>
-                    )}
-                    
-                    <div className="relative">
-                       <Icon name={item.icon} active={isActive} size={22} />
-                    </div>
-
-                    <div className="flex flex-col items-start gap-0.5">
-                       <span className={`text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 ${isActive ? 'text-white' : 'text-gray-600 group-hover:text-gray-300'}`}>
-                          {t(item.tab_id)}
-                       </span>
-                       {isActive && <span className="text-[6px] font-bold text-primary uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">{t('modulo_activo')}</span>}
-                    </div>
-                  </button>
-                );
-              })}
-           </div>
-        </div>
+  /* ── Render guards ── */
+  if (!session) return <Login />
+  if (loading) return (
+    <div style={{ height: '100vh', background: '#07070F', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 36px rgba(99,102,241,0.45)' }}>
+        <Flame size={22} color="#fff" />
       </div>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-10 bg-[#050505]/80 backdrop-blur-md z-50">
-          <div className="flex items-center gap-3 md:gap-8">
-            <button onClick={() => setIsMenuOpen(true)} className="p-2.5 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 bg-white/5 rounded-xl border border-white/5"><Layout size={20} /></button>
-            <div className="flex items-center gap-2 md:gap-5">
-              {branding.logo_url && <img src={branding.logo_url} className="h-6 md:h-8 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]" alt="logo" />}
-              <div className="relative group">
-                <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <h1 className="relative text-[12px] xs:text-[16px] md:text-[20px] font-black uppercase tracking-[0.1em] xs:tracking-[0.2em] md:tracking-[0.3em] italic text-white flex items-center gap-2 md:gap-3">
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.2)]">LITERA MEAT</span>
-                  <span className="hidden xs:inline text-gray-400 font-light not-italic">|</span>
-                  <span className="hidden sm:inline tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 drop-shadow-md">GESTIÓN TÉRMICA</span>
-                </h1>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-6">
-             <div className="flex flex-col items-end mr-1 md:mr-2">
-                <span className="text-[9px] md:text-[11px] font-black text-white italic tracking-tighter leading-none">
-                   {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </span>
-                <span className="text-[6px] md:text-[7px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                   {currentTime.toLocaleDateString(branding.idioma === 'en' ? 'en-US' : 'es-ES', { day: '2-digit', month: 'short' })}
-                   <span className="hidden xs:inline"> {currentTime.getFullYear()}</span>
-                </span>
-             </div>
-             <div className="flex items-center gap-2 bg-white/[0.03] px-3 md:px-5 py-1.5 md:py-2 rounded-full border border-white/5 shadow-inner">
-                <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shadow-lg ${isOnline ? 'bg-[#00FF88] shadow-[#00FF88]/40 animate-pulse' : 'bg-red-500 shadow-red-500/40 animate-[pulse_0.5s_infinite]'}`}></div>
-                <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${isOnline ? 'text-gray-500' : 'text-red-500'} hidden xs:inline`}>
-                  {isOnline ? 'ONLINE' : 'OFFLINE'}
-                </span>
-             </div>
-             <div className="flex items-center gap-1.5 md:gap-2">
-                <div 
-                  onClick={() => setActiveTab('configuracion')}
-                  className="w-10 h-10 md:w-12 md:h-12 bg-[#0A0A0A] border border-white/10 rounded-xl md:rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary cursor-pointer transition-all hover:border-primary/50 group"
-                  title="Configuración"
-                >
-                  <Settings size={18} className="group-hover:rotate-90 transition-transform duration-500" />
-                </div>
-                <div 
-                  onClick={handleLogout}
-                  className="w-10 h-10 md:w-12 md:h-12 bg-[#0A0A0A] border border-white/10 rounded-xl md:rounded-2xl flex items-center justify-center text-gray-500 hover:text-red-500 cursor-pointer transition-all hover:border-red-500/50 group"
-                  title="Cerrar Sesión"
-                >
-                  <LogOut size={18} />
-                </div>
-             </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-10 no-scrollbar relative bg-[#020202]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none"></div>
-          <div className="max-w-[1600px] mx-auto relative z-10">
-            {renderContent()}
-          </div>
-        </main>
-      </div>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+        Conectando...
+      </p>
     </div>
   )
-}
 
-const Icon = ({ name, active, size = 22 }) => {
-  const getColors = (name) => {
-    switch (name?.toLowerCase()) {
-      case 'home': case 'dashboard': return { color: '#60A5FA', bg: 'rgba(96, 165, 250, 0.1)', border: 'rgba(96, 165, 250, 0.2)' };
-      case 'tool': case 'tareas': return { color: '#FB923C', bg: 'rgba(251, 146, 60, 0.1)', border: 'rgba(251, 146, 60, 0.2)' };
-      case 'edit': case 'datos': return { color: '#34D399', bg: 'rgba(52, 211, 153, 0.1)', border: 'rgba(52, 211, 153, 0.2)' };
-      case 'ai': case 'ia': case 'ai_chat': case 'cerebro': return { color: '#F472B6', bg: 'rgba(244, 114, 182, 0.1)', border: 'rgba(244, 114, 182, 0.2)' };
-      case 'documentacion': case 'docs': return { color: '#FBBF24', bg: 'rgba(251, 191, 36, 0.1)', border: 'rgba(251, 191, 36, 0.2)' };
-      case 'analiticas': return { color: '#22D3EE', bg: 'rgba(34, 211, 238, 0.1)', border: 'rgba(34, 211, 238, 0.2)' };
-      case 'usuarios': return { color: '#818CF8', bg: 'rgba(129, 140, 248, 0.1)', border: 'rgba(129, 140, 248, 0.2)' };
-      case 'droplet': case 'consumos': return { color: '#FACC15', bg: 'rgba(250, 204, 21, 0.1)', border: 'rgba(250, 204, 21, 0.2)' };
-      case 'equipos': case 'box': return { color: '#FB7185', bg: 'rgba(251, 113, 133, 0.1)', border: 'rgba(251, 113, 133, 0.2)' };
-      default: return { color: '#9CA3AF', bg: 'rgba(255, 255, 255, 0.05)', border: 'rgba(255, 255, 255, 0.1)' };
-    }
-  };
+  const topBarH = 60
+  const subBarH = 48
 
-  const c = getColors(name);
-  const strokeColor = active ? c.color : '#444';
-  const glow = active ? `drop-shadow(0 0 8px ${c.color}66)` : 'none';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-void, #020205)', overflow: 'hidden', fontFamily: 'Inter, sans-serif' }}>
 
-  const CustomSVG = ({ children, viewBox = "0 0 24 24" }) => (
-    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-700 border relative overflow-hidden ${
-      active 
-        ? 'shadow-[inset_0_0_15px_rgba(255,255,255,0.05)]' 
-        : 'bg-[#050505] border-white/5'
-    }`} style={{ backgroundColor: active ? c.bg : '#050505', borderColor: active ? c.border : 'rgba(255,255,255,0.05)' }}>
-      {/* REFLEJO DE CRISTAL */}
-      <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-white/10 to-transparent opacity-20"></div>
-      
-      <svg 
-        width={size} height={size} viewBox={viewBox} fill="none" 
-        stroke={strokeColor} strokeWidth={active ? "2" : "1.5"} strokeLinecap="round" strokeLinejoin="round"
-        style={{ filter: glow, transition: 'all 0.5s ease' }}
-        className="group-hover:scale-110 group-hover:rotate-[360deg] transition-all duration-700 relative z-10"
-      >
-        {children}
-      </svg>
+      {/* ═══════════════════════════════════════
+          TOP HEADER  — branding + user controls
+      ═══════════════════════════════════════ */}
+      <header style={{
+        height: topBarH,
+        background: 'rgba(5,5,12,0.98)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        flexShrink: 0,
+        zIndex: 300,
+        position: 'relative',
+      }}>
+
+        {/* LEFT: Logo + Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 34, height: 34,
+            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(99,102,241,0.4)',
+            flexShrink: 0,
+          }}>
+            <img src="/boiler_3d.png" alt="logo"
+              style={{ width: 22, height: 22, objectFit: 'contain', mixBlendMode: 'screen', filter: 'brightness(2.5) saturate(0)' }}
+              onError={e => { e.target.style.display = 'none'; const f = document.createElement('span'); f.textContent = '⚙'; f.style.color = '#fff'; f.style.fontSize = '16px'; e.target.parentNode.appendChild(f); }}
+            />
+          </div>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>
+              {branding.empresa_nombre || 'DRAFTIN'}
+            </p>
+            <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.22)', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 2 }}>
+              Industrial OS
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT: Status + Clock + Actions + User */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+
+          {/* Online status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: isOnline ? '#10B981' : '#EF4444',
+              boxShadow: isOnline ? '0 0 10px rgba(16,185,129,0.6)' : '0 0 10px rgba(239,68,68,0.6)',
+            }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {isOnline ? 'En línea' : 'Offline'}
+            </span>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
+
+          {/* Clock */}
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>
+              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 2 }}>
+              {currentTime.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+            </p>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
+
+          {/* Bell */}
+          <div ref={notificationsRef} style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              style={{
+                width: 34, height: 34,
+                background: showNotifications ? 'rgba(255,107,0,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${showNotifications ? 'rgba(255,107,0,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: showNotifications ? 'var(--primary, #FF6B00)' : 'rgba(255,255,255,0.4)',
+                position: 'relative', transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { if(!showNotifications) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' } }}
+              onMouseLeave={e => { if(!showNotifications) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' } }}
+            >
+              <Bell size={15} />
+              {notifications.length > 0 && (
+                <span style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: '#EF4444', border: '1.5px solid #020205' }} />
+              )}
+            </button>
+
+            {showNotifications && (
+              <NotificationsDropdown 
+                notifications={notifications}
+                onClose={() => setShowNotifications(false)}
+                onClear={() => setNotifications([])}
+              />
+            )}
+          </div>
+
+
+
+          {/* User menu */}
+          <div ref={userMenuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserMenu(p => !p)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '5px 10px 5px 6px',
+                background: showUserMenu ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 10,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+              onMouseLeave={e => { if (!showUserMenu) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+            >
+              <div style={{
+                width: 26, height: 26,
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                border: '1px solid rgba(99,102,241,0.35)',
+                borderRadius: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 800, color: 'var(--primary, #6366F1)',
+              }}>
+                {userName ? userName[0].toUpperCase() : 'U'}
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#fff', lineHeight: 1, whiteSpace: 'nowrap' }}>{userName || 'Usuario'}</p>
+                <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{userRole}</p>
+              </div>
+              <ChevronDown size={12} color="rgba(255,255,255,0.3)" style={{ transition: 'transform 0.2s', transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+            </button>
+
+            {/* Dropdown */}
+            {showUserMenu && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                width: 200,
+                background: 'rgba(10,10,18,0.98)',
+                border: '1px solid rgba(255,255,255,0.09)',
+                borderRadius: 12,
+                boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+                overflow: 'hidden',
+                zIndex: 400,
+                backdropFilter: 'blur(20px)',
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{userName}</p>
+                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2, textTransform: 'capitalize' }}>{userRole}</p>
+                </div>
+                <div style={{ padding: 8 }}>
+                  <button
+                    onClick={() => { setActiveTab('configuracion'); setShowUserMenu(false) }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 12px', borderRadius: 8, border: 'none',
+                      background: 'transparent', color: 'rgba(255,255,255,0.6)',
+                      cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                      textAlign: 'left', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+                  >
+                    <Settings size={14} /> Configuración
+                  </button>
+                  <button
+                    onClick={() => { handleLogout(); setShowUserMenu(false) }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 12px', borderRadius: 8, border: 'none',
+                      background: 'transparent', color: 'rgba(239,68,68,0.7)',
+                      cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                      textAlign: 'left', transition: 'all 0.15s', marginTop: 2,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.color = '#EF4444' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,68,68,0.7)' }}
+                  >
+                    <LogOut size={14} /> Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ═══════════════════════════════════════
+          NAVIGATION BAR  — horizontal tabs
+      ═══════════════════════════════════════ */}
+      <nav style={{
+        height: subBarH,
+        background: 'rgba(8,8,16,0.95)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex',
+        alignItems: 'stretch',
+        padding: '0 24px',
+        flexShrink: 0,
+        overflowX: 'auto',
+        zIndex: 200,
+        gap: 2,
+      }} className="no-scrollbar">
+        {visibleNavItems.map((item) => {
+          const Icon = getTabIcon(item.tab_id)
+          const isActive = activeTab === item.tab_id
+          return (
+            <button
+              key={item.tab_id}
+              id={`nav-${item.tab_id}`}
+              onClick={() => setActiveTab(item.tab_id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '0 16px',
+                borderRadius: 0,
+                border: 'none',
+                borderBottom: isActive ? '2px solid var(--primary, #FF6B00)' : '2px solid transparent',
+                background: 'transparent',
+                color: isActive ? '#fff' : 'rgba(255,255,255,0.36)',
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 500,
+                letterSpacing: '0.01em',
+                position: 'relative',
+              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.36)'; e.currentTarget.style.background = 'transparent' } }}
+            >
+              <Icon size={15} style={{ filter: isActive ? 'drop-shadow(0 0 5px rgba(99,102,241,0.7))' : 'none', color: isActive ? 'var(--primary, #6366F1)' : 'inherit' }} />
+              {t(item.tab_id) || item.nombre || item.tab_id}
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* ═══════════════════════════════════════
+          MAIN CONTENT
+      ═══════════════════════════════════════ */}
+      <main style={{
+        flex: 1,
+        overflowY: 'auto',
+        background: 'var(--bg-void, #020205)',
+        position: 'relative',
+      }} className="no-scrollbar">
+        {/* Ambient glow */}
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: 300,
+          background: 'radial-gradient(ellipse 80% 40% at 50% -5%, rgba(255,107,0,0.05), transparent)',
+          pointerEvents: 'none', zIndex: 0,
+        }} />
+
+        <div style={{ maxWidth: 1600, margin: '0 auto', padding: '32px 28px 48px', position: 'relative', zIndex: 1 }}>
+          {activeTab === 'inicio' || activeTab === 'dashboard' ? (
+            <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} groups={appConfigGrupos} refreshData={fetchData} />
+          ) : activeTab === 'ordenes' || activeTab === 'tareas' ? (
+            <WorkOrders t={t} branding={branding} />
+          ) : activeTab === 'recogida' || activeTab === 'datos' ? (
+            <RecogidaDatos t={t} refreshData={fetchData} userName={userName} userRole={userRole} branding={branding} equipos={equipos} />
+          ) : activeTab === 'scan' ? (
+            <ScanLanding t={t} setActiveTab={setActiveTab} eqId={new URLSearchParams(window.location.search).get('eq_id')} equipos={equipos} />
+          ) : activeTab === 'consumo' || activeTab === 'consumos' ? (
+            <Consumos t={t} />
+          ) : activeTab === 'analiticas' ? (
+            <Analiticas t={t} />
+          ) : activeTab === 'equipos' ? (
+            <Equipos t={t} equipos={equipos} categories={appConfigGrupos} />
+          ) : activeTab === 'configuracion' || activeTab === 'config' ? (
+            <Configuracion t={t} setActiveTab={setActiveTab} equipos={equipos} groups={appConfigGrupos} />
+          ) : activeTab === 'ai_chat' || activeTab === 'ai' || activeTab === 'cerebro' ? (
+            <AIChat t={t} />
+          ) : activeTab === 'documentacion' || activeTab === 'docs' ? (
+            <BibliotecaDocs t={t} userRole={userRole} />
+          ) : (
+            <Home t={t} setActiveTab={setActiveTab} equipos={equipos} ordenes={ordenes} planMantenimiento={planMantenimiento} refreshData={fetchData} />
+          )}
+        </div>
+      </main>
+
+      {/* ═══════════════════════════════════════
+          FOOTER
+      ═══════════════════════════════════════ */}
+      <footer style={{
+        height: 32,
+        background: 'rgba(5,5,12,0.95)',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 24px',
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          {branding.empresa_nombre || 'DRAFTIN'} • v1.5.2 PRO
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.1)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Industrial OS • 2026
+        </span>
+      </footer>
+
+      {/* Global AI Assistant */}
+      <AINeuralCore 
+        state={activeTab === 'ai' ? 'thinking' : 'idle'} 
+        onClick={() => setActiveTab('ai')} 
+      />
     </div>
-  );
-
-  switch (name?.toLowerCase()) {
-    case 'home': case 'dashboard': return (
-      <CustomSVG>
-        <rect x="2" y="2" width="9" height="9" rx="1" />
-        <rect x="13" y="2" width="9" height="5" rx="1" opacity="0.4" />
-        <rect x="13" y="9" width="9" height="13" rx="1" />
-        <rect x="2" y="13" width="9" height="9" rx="1" opacity="0.4" />
-        <path d="M7 7h.01M17 4h.01M17 15h.01M7 17h.01" strokeWidth="3" />
-      </CustomSVG>
-    );
-    case 'tool': case 'tareas': return (
-      <CustomSVG>
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z" />
-        <path d="M12 12l-5 5M9 9l-2 2" opacity="0.4" />
-      </CustomSVG>
-    );
-    case 'edit': case 'datos': return (
-      <CustomSVG>
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" opacity="0.4" />
-      </CustomSVG>
-    );
-    case 'ai': case 'ia': case 'ai_chat': case 'cerebro': return (
-      <CustomSVG>
-        <circle cx="12" cy="12" r="10" strokeWidth="1" opacity="0.2" />
-        <circle cx="12" cy="12" r="3" strokeWidth="2" />
-        <path d="M12 9V7M12 17v-2M15 12h2M9 12H7" strokeWidth="2" />
-        <path d="M14.5 9.5l1.5-1.5M9.5 14.5L8 16M14.5 14.5l1.5 1.5M9.5 9.5L8 8" opacity="0.6" />
-      </CustomSVG>
-    );
-    case 'documentacion': case 'docs': return (
-      <CustomSVG>
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <path d="M9 7h6M9 11h6" opacity="0.4" />
-      </CustomSVG>
-    );
-    case 'analiticas': return (
-      <CustomSVG>
-        <path d="M12 20V10M18 20V4M6 20v-4" strokeWidth="2.5" />
-        <path d="M3 20h18" strokeWidth="1" opacity="0.3" />
-      </CustomSVG>
-    );
-    case 'usuarios': return (
-      <CustomSVG>
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87M18 3.13a4 4 0 0 1 0 7.75" opacity="0.4" />
-      </CustomSVG>
-    );
-    case 'droplet': case 'consumos': return (
-      <CustomSVG>
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeWidth="2" />
-        <path d="M13 2l-1 8h9" opacity="0.4" />
-      </CustomSVG>
-    );
-    case 'equipos': case 'box': return (
-      <CustomSVG>
-        <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
-        <path d="M3 8l9 5 9-5M12 22v-9" opacity="0.4" />
-      </CustomSVG>
-    );
-    default: return (
-      <CustomSVG>
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-      </CustomSVG>
-    );
-  }
+  )
 }
 
 export default App

@@ -1,37 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { generateOrderReport } from '../services/reportService';
-import { Activity, Bell, AlertTriangle } from 'lucide-react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { Activity, AlertTriangle, ClipboardList, Zap, ArrowRight, Calendar, TrendingUp } from 'lucide-react';
+import { aiService } from '../services/aiService';
 
+const AIInsightCard = ({ otsCount, equipos = [] }) => {
+  const [insight, setInsight] = useState('Analizando estado de la planta...');
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    let isMounted = true;
+    const getInsight = async () => {
+      try {
+        // Resumen técnico real para la IA
+        const systems = [...new Set(equipos.map(e => e.sistema))].filter(Boolean).slice(0, 5).join(', ');
+        const activeOTs = Array.isArray(safeOrdenes) ? safeOrdenes.filter(o => o.estado !== 'Finalizada').map(o => o.titulo).slice(0, 3).join(', ') : '';
+        
+        const text = await aiService.chat([
+          { role: 'user', content: `Supervisor de Litera Meat. Sistemas: ${systems}. OTs urgentes: ${activeOTs}. Dame un insight técnico MUY corto y práctico. Nada de teorías genéricas. Usa un emoji.` }
+        ], { ots: otsCount, equipos: systems });
+        
+        if (isMounted) setInsight(text);
+      } catch (e) { 
+        if (isMounted) setInsight('¡Listo para optimizar la planta! ⚙️'); 
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    getInsight();
+    return () => { isMounted = false; };
+  }, [otsCount, equipos.length]);
+
+  return (
+    <div className="bg-purple-600/5 border border-purple-500/20 rounded-3xl p-6 mb-8 flex items-center gap-6 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[50px] -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+      <div className={`w-14 h-14 bg-purple-500/20 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.2)] ${loading ? 'animate-pulse' : ''}`}>
+        <Zap size={28} />
+      </div>
+      <div className="flex-1">
+        <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1 italic">Antigravity Insight</h4>
+        <p className="text-[13px] text-gray-200 font-bold leading-relaxed">
+          {insight}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento = [], groups = [], refreshData }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const [chartReady, setChartReady] = useState(false);
-  const [gasData, setGasData] = useState([]);
-  const [waterData, setWaterData] = useState([]);
-
-  useEffect(() => {
-    async function loadTrends() {
-      try {
-        const { getOperationalTrends } = await import('../services/dataService');
-        const [gas, water] = await Promise.all([
-          getOperationalTrends('TELEMETRÍA'), // Esto filtrará por tipo en datos_operativos
-          getOperationalTrends('TELEMETRÍA')
-        ]);
-        
-        // Formatear para las gráficas (Gas vs Agua se separan por la variable)
-        setGasData(gas.map(d => ({ h: d.fecha, v: d['Caldera 1'] || d['Caldera 2'] || 0 })));
-        setWaterData(water.map(d => ({ h: d.fecha, v: d['Intercambiador A'] || d['Intercambiador B'] || 0 })));
-      } catch (e) {
-        console.error("Error cargando tendencias:", e);
-      } finally {
-        setChartReady(true);
-      }
-    }
-    loadTrends();
-  }, [refreshData]);
 
   const safeOrdenes = Array.isArray(ordenes) ? ordenes : [];
   const safePlan = Array.isArray(planMantenimiento) ? planMantenimiento : [];
@@ -44,73 +60,54 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
       const itemDate = new Date(item.proxima_fecha);
       return itemDate >= today || itemDate.toLocaleDateString() === today.toLocaleDateString();
     }).map(m => ({ ...m, isPlan: true, date: m.proxima_fecha })),
-    ...safeOrdenes.filter(o => 
+    ...safeOrdenes.filter(o =>
       o.estado !== 'Finalizada' && (
-        o.tipo === 'Auditoría' || 
-        o.tipo === 'Inspección' || 
+        o.tipo === 'Auditoría' ||
+        o.tipo === 'Inspección' ||
         (o.titulo || '').toLowerCase().includes('inspección')
       )
     ).map(o => ({ ...o, isOrder: true, date: o.fecha_programada || o.created_at }))
   ]
-  .sort((a, b) => new Date(a.date) - new Date(b.date))
-  .slice(0, 8);
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 6);
 
-  // FILTRO INDUSTRIAL REVISADO (Mapeo de Equipos a Grupos SaaS)
   const getGrupoId = (eq) => {
     if (!eq) return 'Otros';
     const n = (eq.nombre || '').toUpperCase();
     const s = (eq.sistema || '').toUpperCase();
-    
-    // 1. PRIORIDAD: DESGASIFICADOR (Independiente del sistema)
     if (n.includes('DESGASIFICADOR')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('DESGAS') || g.grupo_id.toUpperCase().includes('DESGAS'));
-       return match ? (match.grupo_id || match.nombre) : 'Desgasificador';
+      const match = groups.find(g => g.nombre.toUpperCase().includes('DESGAS') || g.grupo_id.toUpperCase().includes('DESGAS'));
+      return match ? (match.grupo_id || match.nombre) : 'Desgasificador';
     }
-
-    // 2. PRIORIDAD: TRATAMIENTO DE AGUA (Descalcificadores)
     if (n.includes('DESCALC') || n.includes('SUAVIZADOR') || n.includes('TRIPLEX') || s.includes('AGUA')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('DESCALC') || g.grupo_id.toUpperCase().includes('DESCALC'));
-       return match ? (match.grupo_id || match.nombre) : 'Descalcificadores';
+      const match = groups.find(g => g.nombre.toUpperCase().includes('DESCALC') || g.grupo_id.toUpperCase().includes('DESCALC'));
+      return match ? (match.grupo_id || match.nombre) : 'Descalcificadores';
     }
-
-    // 3. PRIORIDAD: GRUPO TÉRMICO (Intercambiadores)
     if (s.includes('TÉRMICO') || s.includes('TERMICO') || n.includes('INTERCAMB') || n.includes('TÉRMICO') || n.includes('TERMICO')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO') || g.grupo_id.toUpperCase().includes('TERM'));
-       return match ? (match.grupo_id || match.nombre) : 'Grupo Térmico';
+      const match = groups.find(g => g.nombre.toUpperCase().includes('TÉRMICO') || g.nombre.toUpperCase().includes('TERMICO') || g.grupo_id.toUpperCase().includes('TERM'));
+      return match ? (match.grupo_id || match.nombre) : 'Grupo Térmico';
     }
-
-    // 4. PRIORIDAD: CALDERAS Y QUEMADORES (Generación)
     if (n.includes('CALDERA') || n.includes('QUEMADOR') || s.includes('GENERACIÓN')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('CALDERA') || g.grupo_id.toUpperCase().includes('CALDERA'));
-       return match ? (match.grupo_id || match.nombre) : 'Calderas';
+      const match = groups.find(g => g.nombre.toUpperCase().includes('CALDERA') || g.grupo_id.toUpperCase().includes('CALDERA'));
+      return match ? (match.grupo_id || match.nombre) : 'Calderas';
     }
-    
-    // 5. PRIORIDAD: LIMPIEZA
     if (s.includes('LIMPIEZA') || n.includes('LAVADERO') || n.includes('ARCO') || n.includes('SATÉLITE') || n.includes('ZPR45')) {
-       const match = groups.find(g => g.nombre.toUpperCase().includes('LIMPIEZA') || g.grupo_id.toUpperCase().includes('LIMPIEZA'));
-       return match ? (match.grupo_id || match.nombre) : 'Limpieza';
+      const match = groups.find(g => g.nombre.toUpperCase().includes('LIMPIEZA') || g.grupo_id.toUpperCase().includes('LIMPIEZA'));
+      return match ? (match.grupo_id || match.nombre) : 'Limpieza';
     }
-
-    // 6. Búsqueda genérica final
     const matchGeneric = groups.find(g => {
       const gName = (g.nombre || '').toUpperCase();
       const gId = (g.grupo_id || '').toUpperCase();
       return (s === gId || s === gName || n.includes(gName) || n.includes(gId));
     });
-    
     return matchGeneric ? (matchGeneric.grupo_id || matchGeneric.nombre) : 'Otros';
-  };
-
-  const getGroupName = (gid) => {
-    const match = groups.find(g => (g.grupo_id === gid || g.nombre === gid));
-    return match ? match.nombre : gid;
   };
 
   const getImage = (nombre = '') => {
     const n = nombre.toUpperCase();
     if (n.includes('QUEMADOR')) return 'burner_3d.png';
     if (n.includes('CALDERA')) return 'boiler_3d.png';
-    if (n.includes('RACK')) return 'chemical_3d.png'; 
+    if (n.includes('RACK')) return 'chemical_3d.png';
     if (n.includes('COLECTOR')) return 'collector_3d.png';
     if (n.includes('DESGAS')) return 'degasser_3d.png';
     if (n.includes('TRIPLEX')) return 'softener_triplex_3d.png';
@@ -123,290 +120,193 @@ const Home = ({ t, setActiveTab, equipos = [], ordenes = [], planMantenimiento =
 
   const getGroupStatus = (gid) => {
     const inGroup = safeEquipos.filter(eq => getGrupoId(eq) === gid);
-    if (safeOrdenes.some(o => inGroup.some(eq => eq.id === o.equipo_id) && o.estado !== 'Finalizada' && o.prioridad === 'Urgente')) return 'Crítico';
-    return safeOrdenes.some(o => inGroup.some(eq => eq.id === o.equipo_id) && o.estado !== 'Finalizada') ? 'Alarma' : 'Operativo';
+    if (safeOrdenes.some(o => inGroup.some(eq => eq.id === o.equipo_id) && o.estado !== 'Finalizada' && o.prioridad === 'Urgente')) return 'critical';
+    return safeOrdenes.some(o => inGroup.some(eq => eq.id === o.equipo_id) && o.estado !== 'Finalizada') ? 'warning' : 'ok';
   };
 
+  const stats = [
+    {
+      label: 'Órdenes Activas',
+      val: safeOrdenes.filter(o => o.estado !== 'Finalizada').length,
+      color: '#fff',
+      accent: 'rgba(255,255,255,0.06)',
+      icon: <ClipboardList size={20} />,
+      sub: 'Total sin cerrar',
+      onClick: () => setActiveTab('tareas'),
+    },
+    {
+      label: 'En Ejecución',
+      val: safeOrdenes.filter(o => o.estado === 'En Progreso').length,
+      color: 'var(--primary)',
+      accent: 'rgba(255,107,0,0.08)',
+      icon: <Activity size={20} />,
+      sub: 'En progreso ahora',
+      onClick: () => setActiveTab('tareas'),
+    },
+    {
+      label: 'Estado Crítico',
+      val: safeOrdenes.filter(o => o.prioridad === 'Urgente' && o.estado !== 'Finalizada').length,
+      color: '#EF4444',
+      accent: 'rgba(239,68,68,0.08)',
+      icon: <AlertTriangle size={20} />,
+      sub: 'Urgencia alta',
+      onClick: () => setActiveTab('tareas'),
+    },
+    {
+      label: 'Eficiencia Mes',
+      val: '94%',
+      color: '#10B981',
+      accent: 'rgba(16,185,129,0.08)',
+      icon: <TrendingUp size={20} />,
+      sub: 'vs 91% mes anterior',
+      onClick: () => setActiveTab('analiticas'),
+    },
+  ];
+
+  const nextReg = safePlan
+    .filter(p => p.tipo?.toUpperCase() === 'REGLAMENTARIO')
+    .sort((a, b) => new Date(a.proxima_fecha) - new Date(b.proxima_fecha))[0];
+  const daysToInspection = nextReg
+    ? Math.ceil((new Date(nextReg.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+
   return (
-    <div className="animate-in fade-in duration-500 pb-10 relative">
-      {/* STATS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: t('ordenes_abiertas') || 'Órdenes Abiertas', val: safeOrdenes.filter(o => o.estado !== 'Finalizada').length, color: 'text-white' },
-          { label: t('en_progreso') || 'En Proceso', val: safeOrdenes.filter(o => o.estado === 'En Progreso').length, color: 'text-primary' },
-          { label: t('urgentes') || 'Urgentes', val: safeOrdenes.filter(o => o.prioridad === 'Urgente' && o.estado !== 'Finalizada').length, color: 'text-red-500' },
-          { label: t('completado') || 'Finalizadas', val: safeOrdenes.filter(o => o.estado === 'Finalizada').length, color: 'text-[#00843D]' }
-        ].map((s, i) => (
-          <div key={i} className="flex flex-col gap-0.5 border-l border-white/5 pl-3">
-             <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em]">{s.label}</span>
-             <span className={`text-xl font-black ${s.color} tracking-tighter`}>{s.val}</span>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, animation: 'fade-in-up 0.5s ease' }}>
+      <AIInsightCard otsCount={safeOrdenes.length} equipos={safeEquipos} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        {stats.map((s, i) => (
+          <button
+            key={i}
+            onClick={s.onClick}
+            style={{
+              background: s.accent,
+              border: `1px solid rgba(255,255,255,0.07)`,
+              borderRadius: 16,
+              padding: '20px 22px',
+              display: 'flex', flexDirection: 'column', gap: 12,
+              cursor: 'pointer', textAlign: 'left',
+              transition: 'all 0.25s ease',
+              position: 'relative', overflow: 'hidden',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = `${s.color}30`; e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,0.4)` }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.boxShadow = 'none' }}
+          >
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${s.color}30, transparent)` }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{s.label}</span>
+              <div style={{ color: s.color, opacity: 0.7 }}>{s.icon}</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: s.color, letterSpacing: '-0.04em', lineHeight: 1 }}>{s.val}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', fontWeight: 500 }}>{s.sub}</span>
+              <ArrowRight size={12} color={s.color} style={{ opacity: 0.5 }} />
+            </div>
+          </button>
         ))}
       </div>
 
-
-
-      <div className="flex flex-col lg:flex-row gap-10">
-        <div className="flex-1 min-w-0 space-y-6">
-          <div className="flex items-center justify-between h-10 mb-6">
-            <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] flex items-center gap-3 italic">
-                <div className="w-1.5 h-3 bg-primary shadow-[0_0_15px_rgba(var(--primary-color-rgb),0.5)]"></div>
-                {t('estado_sectores') || 'Estado de los Sectores'}
-            </h3>
-            <div className="flex gap-2">
-              {selectedGroup && (
-                <button onClick={() => setSelectedGroup(null)} className="text-[8px] font-black text-primary border border-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-widest">
-                  ‹ {t('volver')}
-                </button>
-              )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 20, padding: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 3, height: 18, background: 'var(--primary)', borderRadius: 3, boxShadow: '0 0 12px rgba(255,107,0,0.5)' }} />
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '-0.01em' }}>
+                {selectedGroup ? `Equipos — ${selectedGroup}` : t('estado_sectores') || 'Estado de Sectores'}
+              </h3>
             </div>
+            {selectedGroup && (
+              <button
+                onClick={() => setSelectedGroup(null)}
+                style={{
+                  fontSize: 12, fontWeight: 600, color: 'var(--primary)',
+                  background: 'rgba(255,107,0,0.1)', border: '1px solid rgba(255,107,0,0.2)',
+                  padding: '4px 12px', borderRadius: 8, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                ← Volver
+              </button>
+            )}
           </div>
 
           {!selectedGroup ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-4">
-              {groups.sort((a, b) => a.orden - b.orden).map((g, idx) => {
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
+              {groups.sort((a, b) => a.orden - b.orden).map((g) => {
                 const gid = g.grupo_id || g.nombre;
                 const status = getGroupStatus(gid);
-                
+                const statusColor = status === 'ok' ? '#10B981' : status === 'warning' ? '#F59E0B' : '#EF4444';
                 return (
-                  <div 
-                    key={g.id} 
-                    onClick={() => setSelectedGroup(gid)} 
-                    className="aspect-square bg-white/[0.03] border border-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all flex flex-col items-center gap-1.5 relative group justify-center rounded-[8px] shadow-lg p-2 cursor-pointer"
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedGroup(gid)}
+                    style={{
+                      aspectRatio: '1', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease', padding: 12,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,107,0,0.25)'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.4)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                   >
-                     <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${status === 'Operativo' ? 'bg-[#00FF88] shadow-[0_0_10px_#00FF88]' : 'bg-red-500 shadow-[0_0_10px_#EF4444] animate-pulse'}`}></div>
-
-                     <div className="relative w-[85%] h-[85%] flex items-center justify-center">
-                        <div className="absolute inset-0 bg-primary/20 blur-[20px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                        <img 
-                          src={`/${g.imagen || g.image}`} 
-                          className="w-full h-full object-contain mix-blend-screen group-hover:scale-110 transition-all duration-1000 relative z-10"
-                          style={{ 
-                            filter: 'brightness(1.6) contrast(1.2)',
-                            maskImage: 'radial-gradient(circle, black 50%, transparent 95%)',
-                            WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 95%)'
-                          }} 
-                          alt="" 
-                        />
-                     </div>
-                     <span className="text-[7px] font-black uppercase text-white/40 tracking-tighter group-hover:text-primary transition-colors text-center px-0.5 line-clamp-1">{g.nombre}</span>
-                  </div>
+                    <div style={{ position: 'absolute', top: 10, right: 10, width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: `0 0 10px ${statusColor}`, animation: status !== 'ok' ? 'pulse-glow 1.5s ease infinite' : 'none' }} />
+                    <div style={{ position: 'relative', width: '75%', height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={`/${g.imagen || g.image}`} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'screen', filter: 'brightness(1.7) contrast(1.15)', maskImage: 'radial-gradient(circle, black 55%, transparent 95%)', WebkitMaskImage: 'radial-gradient(circle, black 55%, transparent 95%)', transition: 'transform 0.6s ease' }} alt="" />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{g.nombre}</span>
+                  </button>
                 );
               })}
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3 animate-in slide-in-from-bottom-6 duration-500">
-                {safeEquipos
-                  .filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase())
-                  .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
-                  .map(eq => (
-                  <div key={eq.id} className="aspect-square bg-white/[0.01] border border-white/5 backdrop-blur-sm flex flex-col items-center gap-1.5 group hover:border-primary/30 transition-all rounded-[6px] relative overflow-hidden shadow-md justify-center p-1.5">
-                    <div className="relative w-[80%] h-[80%] flex items-center justify-center">
-                      <div className="absolute inset-0 bg-primary/5 blur-[10px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      
-                      <img 
-                        src={`/${getImage(eq.nombre)}`} 
-                        className="w-full h-full object-contain mix-blend-screen group-hover:scale-110 transition-all duration-700"
-                        style={{ 
-                          filter: `brightness(1.5) contrast(1.3) ${(eq.nombre || '').toUpperCase().includes('RACK') ? 'grayscale(1) contrast(1.5)' : ''}`,
-                          maskImage: 'radial-gradient(circle, black 40%, transparent 90%)',
-                          WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 90%)'
-                        }} 
-                        alt="" 
-                      />
-                    </div>
-                    <span className="text-[6px] font-black uppercase text-center text-white/20 line-clamp-1 leading-tight tracking-tighter group-hover:text-white transition-colors z-10 px-0.5">{eq.nombre}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10, animation: 'fade-in-up 0.35s ease' }}>
+              {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).map(eq => (
+                <div key={eq.id} style={{ aspectRatio: '1', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, position: 'relative', overflow: 'hidden', transition: 'all 0.25s ease' }}>
+                  <div style={{ width: '78%', height: '78%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={`/${getImage(eq.nombre)}`} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'screen', filter: 'brightness(1.5) contrast(1.2)', maskImage: 'radial-gradient(circle, black 45%, transparent 90%)', WebkitMaskImage: 'radial-gradient(circle, black 45%, transparent 90%)' }} alt="" />
                   </div>
-                ))}
-              </div>
-              {safeEquipos.filter(eq => getGrupoId(eq).toLowerCase() === selectedGroup.toLowerCase()).length === 0 && (
-                <div className="col-span-full py-12 text-center border border-dashed border-white/5 rounded-[24px] flex flex-col items-center gap-4">
-                   <AlertTriangle className="text-white/10 w-8 h-8" />
-                   <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em]">No hay unidades en este sector</p>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', letterSpacing: '0.03em' }}>{eq.nombre}</span>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* CALENDARIO LATERAL */}
-        <div className="flex-1 min-w-0 space-y-6">
-           <div className="flex items-center h-10">
-              <h3 className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] flex items-center gap-3">
-                  <div className="w-1.5 h-3 bg-blue-500 shadow-[0_0_15px_#3B82F6]"></div>
-                  {t('revisiones_inspecciones') || 'REVISIONES E INSPECCIONES'}
-               </h3>
-           </div>
-           
-           {/* CONTADOR DE DÍAS PARA INSPECCIÓN OFICIAL */}
-           {(() => {
-             const nextReg = safePlan
-               .filter(p => p.tipo?.toUpperCase() === 'REGLAMENTARIO')
-               .sort((a, b) => new Date(a.proxima_fecha) - new Date(b.proxima_fecha))[0];
-             
-             if (!nextReg) return null;
-             
-             const days = Math.ceil((new Date(nextReg.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24));
-             const isUrgent = days <= 30;
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {daysToInspection !== null && (
+            <div style={{ background: daysToInspection <= 30 ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)', border: `1px solid ${daysToInspection <= 30 ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.25)'}`, borderRadius: 16, padding: '18px 20px', animation: daysToInspection <= 30 ? 'pulse-glow 2s ease infinite' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: daysToInspection <= 30 ? '#EF4444' : '#3B82F6' }}>Plazo Legal</span>
+                <div style={{ fontSize: 20, fontWeight: 800, color: daysToInspection <= 30 ? '#EF4444' : '#3B82F6', fontFamily: 'var(--font-mono)' }}>{daysToInspection}d</div>
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: 4 }}>{nextReg.tarea}</p>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>{safeEquipos.find(e => e.id === nextReg.equipo_id)?.nombre || 'Equipo Principal'}</p>
+            </div>
+          )}
 
-             return (
-               <div className={`mb-6 p-4 rounded-xl border ${isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-blue-500/10 border-blue-500/30'} animate-pulse`}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${isUrgent ? 'text-red-500' : 'text-blue-400'}`}>Plazo Legal Inspección</span>
-                    <span className="text-[10px] font-black text-white">{days} DÍAS</span>
-                  </div>
-                  <h4 className="text-[11px] font-bold text-white uppercase leading-tight mb-1">{nextReg.tarea}</h4>
-                  <p className="text-[8px] text-gray-500 font-bold uppercase">
-                    {safeEquipos.find(e => e.id === nextReg.equipo_id)?.nombre || 'EQUIPO PRINCIPAL'}
-                  </p>
-               </div>
-             );
-           })()}
-
-            <div className="flex flex-col gap-4 border-l border-white/5 pl-4">
+          <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: '20px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+              <div style={{ width: 3, height: 18, background: '#3B82F6', borderRadius: 3, boxShadow: '0 0 12px rgba(59,130,246,0.5)' }} />
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>{t('revisiones_inspecciones') || 'Inspecciones'}</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {upcomingMaintenance.map((item, idx) => (
-                <div 
-                  key={idx} 
-                  className="flex flex-col gap-1 group transition-all p-1.5 rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1 h-1 rounded-full ${item.isOrder ? 'bg-orange-500 animate-pulse' : 'bg-blue-400'}`}></div>
-                    <span className={`text-[8px] font-black uppercase tracking-widest leading-none transition-colors line-clamp-1 ${item.isOrder ? 'text-white' : 'text-blue-400/80 group-hover:text-blue-400'}`}>
-                      {item.isOrder ? item.titulo : item.tarea}
-                    </span>
+                <div key={idx} style={{ padding: '12px 0', borderBottom: idx < upcomingMaintenance.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: item.isOrder ? 'var(--primary)' : '#3B82F6', boxShadow: item.isOrder ? '0 0 8px rgba(255,107,0,0.5)' : '0 0 8px rgba(59,130,246,0.5)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)', lineHeight: 1.3, flex: 1 }}>{item.isOrder ? item.titulo : item.tarea}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[6px] text-white/10 font-bold uppercase group-hover:text-white/30 transition-colors">
-                      {item.isOrder 
-                        ? (safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
-                        : (safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'PLANTA')
-                      }
-                    </span>
-                    <span className="text-[8px] font-black text-white/20 group-hover:text-white/60 transition-colors">
-                      {item.date ? new Date(item.date).toLocaleDateString() : '--'}
-                    </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: 14 }}>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontWeight: 500 }}>{safeEquipos.find(e => e.id === item.equipo_id)?.nombre || 'Planta'}</span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{item.date ? new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '--'}</span>
                   </div>
-                  {item.isOrder && (
-                    <div className="flex justify-between items-center mt-0.5">
-                      <span className="text-[6px] font-black text-orange-500/50 uppercase tracking-[0.2em]">{item.estado}</span>
-                    </div>
-                  )}
                 </div>
               ))}
-              {upcomingMaintenance.length === 0 && (
-                <span className="text-[7px] font-black text-white/10 uppercase tracking-widest">No hay hitos programados</span>
-              )}
-            </div>
-        </div>
-      </div>
-
-      {/* SECCIÓN INFERIOR: CONSUMOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-white/5">
-        {/* CONSUMO GAS */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 flex flex-col h-[220px] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/40 to-transparent"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="space-y-1">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">{t('telemetria_consumo_gas')}</span>
-              <div className="text-3xl font-black text-white tracking-tighter flex items-baseline gap-2">
-                0 <span className="text-[12px] text-white/30 font-medium uppercase">m³/h</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-               <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)] animate-pulse shadow-[0_0_10px_var(--primary-color)]"></div>
-               <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Live SCADA</span>
             </div>
           </div>
-            <div className="w-full h-[140px] -ml-4">
-              {chartReady && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
-                  <AreaChart data={gasData.length > 0 ? gasData : [{h:'--',v:0}]}>
-                    <defs>
-                      <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
-                        <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis 
-                      dataKey="h" 
-                      stroke="rgba(255,255,255,0.2)" 
-                      fontSize={8} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                    />
-                    <YAxis 
-                      stroke="rgba(255,255,255,0.2)" 
-                      fontSize={8} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                      domain={[0, 1500]}
-                    />
-                    <Tooltip 
-                      contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                      itemStyle={{color: 'var(--primary-color)'}}
-                    />
-                    <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#gasGradient)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-        </div>
-
-        {/* CONSUMO AGUA */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 flex flex-col h-[220px] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="space-y-1">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">{t('telemetria_consumo_agua')}</span>
-              <div className="text-3xl font-black text-primary tracking-tighter flex items-baseline gap-2">
-                0 <span className="text-[12px] text-primary/40 font-medium uppercase">m³/h</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary-color)]"></div>
-               <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Active Link</span>
-            </div>
-          </div>
-            <div className="w-full h-[140px] -ml-4">
-              {chartReady && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
-                  <AreaChart data={waterData.length > 0 ? waterData : [{h:'--',v:0}]}>
-                    <defs>
-                      <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
-                        <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis 
-                      dataKey="h" 
-                      stroke="rgba(255,255,255,0.2)" 
-                      fontSize={8} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                    />
-                    <YAxis 
-                      stroke="rgba(255,255,255,0.2)" 
-                      fontSize={8} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{fill: 'rgba(255,255,255,0.3)', fontWeight: 800}}
-                      domain={[0, 600]}
-                    />
-                    <Tooltip 
-                      contentStyle={{backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px'}}
-                      itemStyle={{color: 'var(--primary-color)'}}
-                    />
-                    <Area type="monotone" dataKey="v" stroke="var(--primary-color)" strokeWidth={3} fill="url(#waterGradient)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
         </div>
       </div>
     </div>

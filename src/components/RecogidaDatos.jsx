@@ -153,46 +153,44 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
       }, 500);
     }
   }, [activeTab]);
-
   useEffect(() => {
-    const pending = localStorage.getItem('draftin_pending_revision');
-    if (pending) {
-      setPendingSync(true);
-      // Intentar sincronizar automáticamente si ya estamos online al cargar
-      if (navigator.onLine) {
-        console.log("Detectada revisión pendiente y conexión activa. Sincronizando...");
-        handleSubmit();
-      }
-    }
-
     const handleSync = () => {
-      if (navigator.onLine && localStorage.getItem('draftin_pending_revision')) {
-        handleSubmit();
+      if (navigator.onLine) {
+        const pending = localStorage.getItem('draftin_pending_revision');
+        if (pending) {
+          console.log("Sincronizando revisión pendiente...");
+          handleSubmit(null, JSON.parse(pending));
+        }
       }
     };
 
     window.addEventListener('online', handleSync);
+    // Verificar al montar si hay algo pendiente y estamos online
+    if (navigator.onLine) handleSync();
+    
     return () => window.removeEventListener('online', handleSync);
   }, [refreshData]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, syncPayload = null) => {
     if (e) e.preventDefault();
     setLoading(true);
 
+    const dataToSave = syncPayload || formData;
+
     // Mapeo detallado para coincidir con el esquema de la DB
-    const payload = { 
-      fecha: formData.fecha, 
-      operario: formData.operario || userName || 'OPERARIO', 
-      datos_calderas: formData.calderas,
-      datos_desgasificador: formData.desgasificador,
-      datos_intercambiadores: formData.intercambiadores,
-      datos_quimica: formData.quimica,
-      datos_salmuera: formData.salmuera,
-      datos_descalcificadores: formData.descalcificadores,
-      datos_bote: formData.bote,
-      datos_satelites: formData.satelites,
-      observaciones: formData.observaciones,
-      datos: formData // Guardamos copia completa por seguridad
+    const payload = syncPayload ? syncPayload : { 
+      fecha: dataToSave.fecha, 
+      operario: dataToSave.operario || userName || 'OPERARIO', 
+      datos_calderas: dataToSave.calderas,
+      datos_desgasificador: dataToSave.desgasificador,
+      datos_intercambiadores: dataToSave.intercambiadores,
+      datos_quimica: dataToSave.quimica,
+      datos_salmuera: dataToSave.salmuera,
+      datos_descalcificadores: dataToSave.descalcificadores,
+      datos_bote: dataToSave.bote,
+      datos_satelites: dataToSave.satelites,
+      observaciones: dataToSave.observaciones,
+      datos: dataToSave // Guardamos copia completa por seguridad
     };
 
     if (!navigator.onLine) {
@@ -209,7 +207,8 @@ const RecogidaDatos = ({ t, refreshData, userName, userRole, branding, equipos }
       if (error) throw error;
       
       // 2. Procesar datos para analíticas automáticamente
-      await processChecklistData(formData, formData.fecha);
+      const processData = syncPayload ? syncPayload : formData;
+      await processChecklistData(processData, payload.fecha);
       
       localStorage.removeItem('draftin_pending_revision');
       setPendingSync(false);

@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import knowledgeBase from '../knowledge_base.json';
+import { aiService } from '../services/aiService';
 
 const AIChat = () => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: '¡Hola! Soy tu asistente industrial inteligente. Puedo ayudarte con dudas sobre mantenimiento, normativas de calderas o análisis de datos. ¿En qué puedo ayudarte hoy?' }
+    { role: 'assistant', content: '¡Hola! Soy Antigravity, tu Supervisor Virtual. Estoy listo para ayudarte con el mantenimiento de Litera Meat. ¿En qué operación trabajamos hoy? ⚙️' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
+  const [liveContext, setLiveContext] = useState({ ots: [], users: [] });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -16,164 +18,154 @@ const AIChat = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    fetchLiveContext();
+  }, []);
+
+  const fetchLiveContext = async () => {
+    const { data: ots } = await supabase
+      .from('work_orders')
+      .select('id, folio, titulo, estado, tecnico:perfiles!work_orders_tecnico_id_fkey(nombre)')
+      .limit(30);
+    const { data: users } = await supabase.from('perfiles').select('id, nombre, email');
+    setLiveContext({ ots: ots || [], users: users || [] });
+  };
+
+  const executeAICommand = async (cmd) => {
+    try {
+      if (cmd.action === 'ASSIGN_OT') {
+        const tech = liveContext.users.find(u => u.nombre.toLowerCase().includes(cmd.technician.toLowerCase()));
+        if (tech) {
+          await supabase.from('work_orders').update({ tecnico_id: tech.id }).eq('folio', cmd.folio);
+          window.dispatchEvent(new CustomEvent('ot_updated'));
+        }
+      }
+      if (cmd.action === 'RESCHEDULE_OT') {
+        await supabase.from('work_orders').update({ fecha_apertura: cmd.date }).eq('folio', cmd.folio);
+        window.dispatchEvent(new CustomEvent('ot_updated'));
+      }
+    } catch (e) {
+      console.error("Command execution error:", e);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMsg = { role: 'user', content: input };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
     try {
-      // 1. Obtener la configuración AI de Supabase (la más reciente)
-      const { data: aiConfigs, error: configError } = await supabase
-        .from('app_config_ai')
-        .select('*')
-        .eq('activo', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      const otContext = liveContext.ots.map(ot => `[OT-${ot.folio}] ${ot.titulo}`).join(', ');
+      const userContext = liveContext.users.map(u => u.nombre).join(', ');
 
-      const aiConfig = aiConfigs?.[0];
-
-      if (configError || !aiConfig?.api_key) {
-        throw new Error('Configuración AI no encontrada o API Key ausente. Por favor, configúrala en el panel de CONFIG.');
-      }
-
-      // 2. Mapear mensajes al formato Gemini
-      const history = newMessages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
-      }));
-
-      // 3. Preparar el historial completo con instrucciones y conocimiento
-      const docsContext = knowledgeBase.map(doc => `DOCUMENTO: ${doc.filename}\nCONTENIDO: ${doc.content}`).join('\n\n');
-      
-      const systemContext = `Eres el Asistente Técnico experto de DRAFTIN. 
-Tus respuestas DEBEN basarse prioritariamente en la siguiente DOCUMENTACIÓN TÉCNICA de la empresa:
-
-${docsContext}
-
-REGLAS DE IDENTIFICACIÓN CRÍTICAS:
-- La Caldera 1 (Caldera de vapor nº 1) se identifica por su número de fabricación que termina en 29 (ej: 10529).
-- La Caldera 2 (Caldera de vapor nº 2) se identifica por su número de fabricación que termina en 30 (ej: 10530).
-
-INSTRUCCIONES:
-1. Responde de forma profesional, concisa y técnica.
-2. Si el usuario pregunta algo que está en los documentos, cita el nombre del documento.
-3. Si la información no está en los documentos, responde usando tu conocimiento general pero indica que no se ha encontrado en los manuales oficiales.
-4. Usa un tono de soporte técnico industrial.`;
-
-      const historyForAPI = [
-        { role: 'user', parts: [{ text: `SISTEMA DE CONOCIMIENTO:\n${systemContext}` }] },
-        { role: 'model', parts: [{ text: "He cargado la biblioteca técnica de DRAFTIN. Estoy listo para responder consultas basadas en los manuales de calderas, inspecciones y fichas técnicas proporcionadas." }] },
-        ...history
-      ];
-
-      // 4. Llamada real a la API de Gemini (Usando el nombre exacto de tu lista: gemini-flash-latest)
-      const cleanKey = aiConfig.api_key.trim();
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey 
-        },
-        body: JSON.stringify({
-          contents: historyForAPI
-        })
+      const aiResponseRaw = await aiService.chat([...messages, userMsg], {
+        ots: otContext,
+        users: userContext
       });
 
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message || 'Error en la respuesta de la IA');
+      const jsonMatch = aiResponseRaw.match(/\{"action":.*\}/);
+      if (jsonMatch) {
+        const cmd = JSON.parse(jsonMatch[0]);
+        await executeAICommand(cmd);
       }
 
-      const aiText = data.candidates[0].content.parts[0].text;
-      setMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
+      const cleanText = aiResponseRaw.replace(/\{"action":.*\}/, '').trim();
+      
+      // Efecto de escritura natural
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      let currentText = '';
+      const words = cleanText.split(' ');
+      
+      for (let i = 0; i < words.length; i++) {
+        currentText += words[i] + ' ';
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = currentText;
+          return updated;
+        });
+        await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 30));
+      }
 
     } catch (err) {
-      console.error("AI Error:", err);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `⚠️ Error de Conexión: ${err.message}` 
-      }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${err.message}` }]);
     } finally {
       setLoading(false);
+      fetchLiveContext();
     }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)] bg-[#0A0A0A] border border-[#222] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col h-[calc(100vh-180px)] bg-[#0A0A0A] border border-white/5 rounded-[32px] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-2xl relative">
+      {/* Ambient Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-24 bg-purple-500/10 blur-[80px] pointer-events-none"></div>
+
       {/* Header */}
-      <div className="p-4 border-b border-[#222] bg-[#111] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-purple-500/20 text-purple-400 rounded-lg flex items-center justify-center border border-purple-500/30">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+      <div className="p-6 border-b border-white/5 bg-white/[0.02] backdrop-blur-md flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center border border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </div>
           <div>
-            <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Asistente Técnico IA</h3>
-            <p className="text-[7px] text-[#00FF88] font-bold uppercase animate-pulse">Online • Motor Gemini Pro</p>
+            <h3 className="text-[13px] font-black text-white uppercase tracking-widest italic">Antigravity Core</h3>
+            <p className="text-[8px] text-purple-400 font-black uppercase tracking-tighter">Supervisor Virtual de Litera Meat</p>
           </div>
         </div>
-        <button className="text-[8px] font-black text-gray-500 uppercase hover:text-white transition-colors">Limpiar Chat</button>
+        <button 
+          onClick={() => setMessages([{ role: 'assistant', content: '¿En qué puedo ayudarte ahora? ⚙️' }])}
+          className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black text-gray-500 uppercase transition-all"
+        >
+          Limpiar
+        </button>
       </div>
 
-      {/* Messages Area */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 no-scrollbar"
-      >
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 no-scrollbar scroll-smooth">
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] p-4 rounded-2xl text-[11px] leading-relaxed ${
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+            <div className={`max-w-[80%] p-6 rounded-[24px] text-[12px] leading-relaxed relative ${
               m.role === 'user' 
-                ? 'bg-primary/10 border border-primary/30 text-white rounded-tr-none' 
-                : 'bg-[#111] border border-[#222] text-gray-300 rounded-tl-none'
+                ? 'bg-primary text-black font-bold rounded-tr-none shadow-xl shadow-primary/10' 
+                : 'bg-white/[0.03] border border-white/5 text-gray-200 rounded-tl-none backdrop-blur-sm'
             }`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[7px] font-black uppercase tracking-widest opacity-50">
-                  {m.role === 'user' ? 'Operador' : 'Asistente IA'}
+              <div className="flex items-center gap-2 mb-3 opacity-40">
+                <span className="text-[8px] font-black uppercase tracking-widest">
+                  {m.role === 'user' ? 'Técnico / Operador' : 'Antigravity'}
                 </span>
               </div>
-              {m.content}
+              <div className="whitespace-pre-wrap">{m.content}</div>
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-[#111] border border-[#222] p-4 rounded-2xl rounded-tl-none flex gap-1">
-              <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce"></div>
-              <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-              <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[24px] rounded-tl-none flex gap-1.5 items-center">
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></div>
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+              <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest ml-3">Pensando...</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input Area */}
-      <form onSubmit={handleSend} className="p-4 bg-[#111] border-t border-[#222]">
+      {/* Input */}
+      <form onSubmit={handleSend} className="p-6 bg-white/[0.02] border-t border-white/5 backdrop-blur-xl relative z-10">
         <div className="relative flex items-center">
           <input 
             type="text" 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu consulta técnica aquí..."
-            className="w-full bg-[#0A0A0A] border border-[#222] text-white text-[11px] p-4 pr-12 rounded-xl focus:border-primary outline-none transition-all"
+            placeholder="Escribe un comando o duda técnica..."
+            className="w-full bg-black/40 border border-white/10 text-white text-[12px] p-5 pr-14 rounded-2xl focus:border-purple-500 outline-none transition-all placeholder:text-gray-700 font-bold"
           />
-          <button 
-            type="submit"
-            className="absolute right-2 p-2 text-primary hover:scale-110 transition-transform"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          <button type="submit" className="absolute right-3 p-3 text-purple-500 hover:scale-110 transition-transform bg-purple-500/10 rounded-xl border border-purple-500/20">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
           </button>
         </div>
-        <p className="text-[7px] text-gray-600 text-center mt-3 uppercase font-bold tracking-widest">
-          SaaS Experimental • Las respuestas de la IA deben ser verificadas por personal cualificado.
-        </p>
       </form>
     </div>
   );

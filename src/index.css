@@ -1,95 +1,332 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════
+   DRAFTIN INDUSTRIAL OS — DESIGN SYSTEM v2.0
+   Command Center Aesthetic
+═══════════════════════════════════════════════ */
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
 :root {
-  --bg-main: #0A0A0A;
-  --bg-card: #141414;
-  --border-main: #222222;
-  --primary-color: #C1001B;
-  --primary-color-rgb: 193, 0, 27;
-  --accent-green: #00843D;
-  --accent-red: #FF0044;
-  --border-radius: 1.5rem;
-  --glass-opacity: 0.1;
-  --card-bg: #111;
+  /* Core Colors */
+  --bg-void: #07070F;
+  --bg-main: #09091A;
+  --bg-sidebar: #08081A;
+  --bg-card: rgba(255, 255, 255, 0.028);
+  --bg-card-hover: rgba(255, 255, 255, 0.05);
+  --bg-card-solid: #0E0E1E;
+
+  /* Border */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-glow: rgba(99, 102, 241, 0.3);
+
+  /* Brand — Indigo */
+  --primary: #6366F1;
+  --primary-rgb: 99, 102, 241;
+  --primary-dim: rgba(99, 102, 241, 0.12);
+  --primary-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* Semantic */
+  --success: #10B981;
+  --success-dim: rgba(16, 185, 129, 0.12);
+  --danger: #EF4444;
+  --danger-dim: rgba(239, 68, 68, 0.12);
+  --warning: #F59E0B;
+  --info: #3B82F6;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Sidebar */
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 72px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-blur: 16px;
+
+  /* Legacy compat */
+  --primary-color: #6366F1;
+  --primary-color-rgb: 99, 102, 241;
+  --border-main: rgba(255, 255, 255, 0.06);
+  --border-radius: 14px;
+}
+
+/* ── BASE ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background-color: var(--bg-main);
-  color: #FFFFFF;
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-void);
+  color: #F0F0F6;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-}
-
-/* Tarjeta Industrial Base */
-.industrial-card {
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--border-radius);
-  backdrop-filter: blur(10px);
-  position: relative;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
   overflow: hidden;
 }
 
-.industrial-card::before {
+/* ── GLASS CARD ── */
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
+}
+
+.glass-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,var(--glass-opacity)) 0%, transparent 100%);
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
   pointer-events: none;
 }
 
-/* Scrollbar Oculto */
+.glass-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Legacy compat */
+.industrial-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.industrial-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+
+.industrial-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* ── SIDEBAR STYLES ── */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 200;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+  color: rgba(255,255,255,0.35);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 2px 10px;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
+}
+
+.sidebar-nav-item.active {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.sidebar-nav-item.active .nav-icon {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+  overflow: hidden;
+}
+
+/* ── STAT CARDS ── */
+.stat-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.stat-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ESTILOS DE IMPRESIÓN PARA ETIQUETAS QR */
+/* ── ANIMATIONS ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-up {
+  animation: fade-in-up 0.5s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease forwards;
+}
+
+.animate-slide-left {
+  animation: slide-in-left 0.4s ease forwards;
+}
+
+/* Stagger delays */
+.delay-1 { animation-delay: 0.05s; opacity: 0; }
+.delay-2 { animation-delay: 0.10s; opacity: 0; }
+.delay-3 { animation-delay: 0.15s; opacity: 0; }
+.delay-4 { animation-delay: 0.20s; opacity: 0; }
+
+/* ── GLOW DOT ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+}
+
+.status-dot.offline {
+  background: var(--danger);
+  animation: pulse-glow 1.5s ease infinite;
+}
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badge-indigo { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(99,102,241,0.25); }
+.badge-orange { background: rgba(251,146,60,0.12); color: #FB923C; border: 1px solid rgba(251,146,60,0.25); }
+.badge-green { background: var(--success-dim); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
+.badge-red { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+
+/* ── PRINT ── */
 @media print {
-  /* Ocultar todo lo que no sea el área de impresión */
-  body > * {
-    display: none !important;
-  }
-  #root > * {
-    display: none !important;
-  }
-  #root #printable-area {
-    display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-  }
-
-  #printable-area, #printable-area * {
-    visibility: visible !important;
-    display: block !important;
-    background: white !important;
-    color: black !important;
-  }
-
-  .qr-print-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 40px !important;
-    padding: 40px !important;
-  }
-
-  .qr-card-print {
-    border: 2px dashed #000 !important;
-    padding: 30px !important;
-    text-align: center !important;
-    background: white !important;
-    border-radius: 20px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-
-  .qr-card-print img {
-    width: 200px !important;
-    height: 200px !important;
-    margin: 0 auto !important;
-  }
+  body > * { display: none !important; }
+  #root > * { display: none !important; }
+  #root #printable-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+  #printable-area, #printable-area * { visibility: visible !important; display: block !important; background: white !important; color: black !important; }
+  .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 40px !important; padding: 40px !important; }
+  .qr-card-print { border: 2px dashed #000 !important; padding: 30px !important; text-align: center !important; background: white !important; border-radius: 20px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; }
+  .qr-card-print img { width: 200px !important; height: 200px !important; margin: 0 auto !important; }
 }

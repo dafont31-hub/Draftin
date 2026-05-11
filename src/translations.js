@@ -1,7 +1,7 @@
 export const translations = {
   es: {
     inicio: "TABLERO",
-    ordenes: "TAREAS",
+    ordenes: "OTs",
     recogida: "RECOGIDA",
     consumo: "CONSUMOS",
     analiticas: "ANALÍTICAS",
@@ -30,7 +30,7 @@ export const translations = {
     online: "DATABASE_ONLINE",
     offline: "OFFLINE_MODE",
     ver_detalles: "VER DETALLES",
-    nueva_tarea: "NUEVA TAREA",
+    nueva_tarea: "NUEVA OT",
     buscar: "BUSCAR...",
     filtrar: "FILTRAR",
     guardar: "GUARDAR",
@@ -66,7 +66,7 @@ export const translations = {
   },
   en: {
     inicio: "DASHBOARD",
-    ordenes: "TASKS",
+    ordenes: "WORK ORDERS (OTs)",
     recogida: "DATA COLLECTION",
     consumo: "CONSUMPTION",
     analiticas: "ANALYTICS",
@@ -95,7 +95,7 @@ export const translations = {
     online: "DATABASE_ONLINE",
     offline: "OFFLINE_MODE",
     ver_detalles: "VIEW DETAILS",
-    nueva_tarea: "NEW TASK",
+    nueva_tarea: "NEW WORK ORDER",
     buscar: "SEARCH...",
     filtrar: "FILTER",
     guardar: "SAVE",
